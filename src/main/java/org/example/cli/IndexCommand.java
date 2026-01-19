@@ -34,11 +34,14 @@ public class IndexCommand implements Runnable {
     @Option(names = {"-v", "--verbose"}, description = "Show detailed progress")
     private boolean verbose;
 
-    @Option(names = {"--skip-scip"}, description = "Skip scip-java execution, use existing .scip file")
+    @Option(names = {"--skip-scip"}, description = "Skip scip execution, use existing .scip file")
     private boolean skipScip;
 
     @Option(names = {"--scip-file"}, description = "Path to existing .scip file (implies --skip-scip)")
     private File scipFile;
+
+    @Option(names = {"-l", "--language"}, description = "Language to index (java, python, typescript). If omitted, detected from repo files.")
+    private String language;
 
     @Override
     public void run() {
@@ -61,11 +64,14 @@ public class IndexCommand implements Runnable {
             System.out.println("Path: " + repoPath);
             System.out.println();
 
-            // Step 1: Check prerequisites
-            checkPrerequisites();
+            // Select runner (by option or auto-detect)
+            ScipRunner runner = org.example.scip.ScipRunnerFactory.create(language, repoPath);
 
-            // Step 2: Run scip-java or use existing file
-            Path indexFile = runScipJava(repoPath);
+            // Step 1: Check prerequisites (uses runner)
+            checkPrerequisites(runner);
+
+            // Step 2: Run scip or use existing file
+            Path indexFile = runScip(runner, repoPath);
 
             // Step 3: Parse SCIP index
             Scip.Index index = parseScipIndex(indexFile);
@@ -98,25 +104,24 @@ public class IndexCommand implements Runnable {
         }
     }
 
-    private void checkPrerequisites() throws ScipException {
+    private void checkPrerequisites(ScipRunner runner) throws ScipException {
         System.out.print("Checking prerequisites... ");
 
-        // Check scip-java if we need to run it
+        // Check scip tool if we need to run it
         if (!skipScip && scipFile == null) {
-            if (!ScipRunner.isInstalled()) {
+            if (!runner.isToolInstalled()) {
                 System.out.println("❌");
                 throw ScipException.notInstalled();
             }
             if (verbose) {
-                System.out.println("scip-java " + ScipRunner.getVersion());
+                System.out.println(runner.getToolVersion());
             }
         }
 
-        // Check if it's a valid Java project
-        ScipRunner runner = new ScipRunner(repositoryPath.toPath());
-        if (!runner.isValidJavaProject()) {
+        // Check if it's a valid project for the selected language
+        if (!runner.isValidProject()) {
             System.out.println("⚠️");
-            System.out.println("Warning: No pom.xml or build.gradle found. scip-java may fail.");
+            System.out.println("Warning: No language-specific build files found. The indexer may fail.");
         } else if (verbose) {
             System.out.println("Build tool: " + runner.detectBuildTool());
         }
@@ -124,7 +129,7 @@ public class IndexCommand implements Runnable {
         System.out.println("✅");
     }
 
-    private Path runScipJava(Path repoPath) throws ScipException {
+    private Path runScip(ScipRunner runner, Path repoPath) throws ScipException {
         // Use existing file if specified
         if (scipFile != null) {
             System.out.println("Using existing SCIP file: " + scipFile);
@@ -137,8 +142,7 @@ public class IndexCommand implements Runnable {
             return defaultFile;
         }
 
-        System.out.print("Running scip-java... ");
-        ScipRunner runner = new ScipRunner(repoPath);
+        System.out.print("Running scip... ");
         Path indexFile = runner.runIndex();
         System.out.println("✅");
 
@@ -197,7 +201,7 @@ public class IndexCommand implements Runnable {
                 .id(repoId)
                 .name(repoName)
                 .path(repoPath)
-                .language("java")
+                .language(language == null ? "java" : language)
                 .lastIndexedAt(Instant.now())
                 .fileCount(result.sourceFiles().size())
                 .symbolCount(result.symbols().size())
