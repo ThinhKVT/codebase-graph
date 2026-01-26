@@ -94,10 +94,28 @@ class ScipToGraphMapperTest {
 
     @Test
     void testMapOccurrence() {
+        // Need to define symbols first, then add occurrences
+        // The mapper now requires: 1) enclosing symbol (definition), 2) target symbol exists
         Scip.Index index = Scip.Index.newBuilder()
             .addDocuments(Scip.Document.newBuilder()
                 .setRelativePath("src/Test.java")
                 .setLanguage("java")
+                // Define the symbols
+                .addSymbols(Scip.SymbolInformation.newBuilder()
+                    .setSymbol("scip-java maven . . . com/example/Test#main().")
+                    .setKind(Scip.SymbolInformation.Kind.Method)
+                    .build())
+                .addSymbols(Scip.SymbolInformation.newBuilder()
+                    .setSymbol("scip-java maven . . . com/example/Foo#bar().")
+                    .setKind(Scip.SymbolInformation.Kind.Method)
+                    .build())
+                // Add occurrences: first a definition (to set enclosing symbol), then a reference
+                .addOccurrences(Scip.Occurrence.newBuilder()
+                    .setSymbol("scip-java maven . . . com/example/Test#main().")
+                    .setSymbolRoles(1) // Definition - sets enclosing symbol
+                    .addRange(5)
+                    .addRange(0)
+                    .build())
                 .addOccurrences(Scip.Occurrence.newBuilder()
                     .setSymbol("scip-java maven . . . com/example/Foo#bar().")
                     .setSymbolRoles(0) // Reference
@@ -111,36 +129,70 @@ class ScipToGraphMapperTest {
 
         assertEquals(1, result.references().size());
         Reference ref = result.references().get(0);
-        assertEquals(ReferenceKind.REFERENCE, ref.kind());
+        // Method reference should be CALL (not generic REFERENCE)
+        assertEquals(ReferenceKind.CALL, ref.kind());
         assertEquals(11, ref.line()); // 1-based
         assertEquals(6, ref.column()); // 1-based
+        assertEquals("scip-java maven . . . com/example/Test#main().", ref.fromSymbolId());
+        assertEquals("scip-java maven . . . com/example/Foo#bar().", ref.toSymbolId());
     }
 
     @Test
     void testMapDefinitionOccurrence() {
+        // Definition occurrences are now used to track enclosing symbol, not create references
+        // Test that symbols are properly tracked
         Scip.Index index = Scip.Index.newBuilder()
             .addDocuments(Scip.Document.newBuilder()
                 .setRelativePath("src/Test.java")
+                .addSymbols(Scip.SymbolInformation.newBuilder()
+                    .setSymbol("test#classA")
+                    .setKind(Scip.SymbolInformation.Kind.Class)
+                    .build())
+                .addSymbols(Scip.SymbolInformation.newBuilder()
+                    .setSymbol("test#classB")
+                    .setKind(Scip.SymbolInformation.Kind.Class)
+                    .build())
                 .addOccurrences(Scip.Occurrence.newBuilder()
-                    .setSymbol("test#symbol")
+                    .setSymbol("test#classA")
                     .setSymbolRoles(1) // Definition
+                    .build())
+                .addOccurrences(Scip.Occurrence.newBuilder()
+                    .setSymbol("test#classB")
+                    .setSymbolRoles(0) // Reference from classA to classB
                     .build())
                 .build())
             .build();
 
         var result = mapper.map(index, "/repo");
 
+        // Should have 1 reference: classA -> classB
         assertEquals(1, result.references().size());
-        assertEquals(ReferenceKind.DEFINITION, result.references().get(0).kind());
+        assertEquals("test#classA", result.references().get(0).fromSymbolId());
+        assertEquals("test#classB", result.references().get(0).toSymbolId());
+        // Class reference should be TYPE_REF (not generic REFERENCE)
+        assertEquals(ReferenceKind.TYPE_REF, result.references().get(0).kind());
     }
 
     @Test
     void testMapImportOccurrence() {
+        // Import occurrences need enclosing symbol and target symbol to be defined
         Scip.Index index = Scip.Index.newBuilder()
             .addDocuments(Scip.Document.newBuilder()
                 .setRelativePath("src/Test.java")
+                .addSymbols(Scip.SymbolInformation.newBuilder()
+                    .setSymbol("test#MyClass")
+                    .setKind(Scip.SymbolInformation.Kind.Class)
+                    .build())
+                .addSymbols(Scip.SymbolInformation.newBuilder()
+                    .setSymbol("java/util/List#")
+                    .setKind(Scip.SymbolInformation.Kind.Interface)
+                    .build())
                 .addOccurrences(Scip.Occurrence.newBuilder()
-                    .setSymbol("test#symbol")
+                    .setSymbol("test#MyClass")
+                    .setSymbolRoles(1) // Definition - sets enclosing symbol
+                    .build())
+                .addOccurrences(Scip.Occurrence.newBuilder()
+                    .setSymbol("java/util/List#")
                     .setSymbolRoles(2) // Import
                     .build())
                 .build())
@@ -148,7 +200,10 @@ class ScipToGraphMapperTest {
 
         var result = mapper.map(index, "/repo");
 
+        assertEquals(1, result.references().size());
         assertEquals(ReferenceKind.IMPORT, result.references().get(0).kind());
+        assertEquals("test#MyClass", result.references().get(0).fromSymbolId());
+        assertEquals("java/util/List#", result.references().get(0).toSymbolId());
     }
 
     @Test
@@ -211,4 +266,3 @@ class ScipToGraphMapperTest {
         assertTrue(result.symbols().stream().anyMatch(s -> s.kind() == SymbolKind.CONSTRUCTOR));
     }
 }
-
