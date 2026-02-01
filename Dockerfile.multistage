@@ -1,0 +1,21 @@
+# Build stage
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn package -DskipTests
+
+# Run stage
+FROM sourcegraph/scip-java:latest
+WORKDIR /app
+
+# Copy the shaded jar (built by Maven) into the image
+COPY --from=build /app/target/codebase-graph-1.0-SNAPSHOT.jar /app/codebase-graph.jar
+
+# Scip-java is pre-installed in this image.
+
+ENV JAVA_OPTS="-Xms128m -Xmx512m"
+
+# Use the same entrypoint logic
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/codebase-graph.jar \"$@\"", "--"]
+CMD ["serve", "--port", "8080"]
