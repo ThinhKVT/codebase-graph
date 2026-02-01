@@ -115,9 +115,33 @@ public class ScipToGraphMapper {
         int occurrencesProcessed = 0;
         int localSymbolsSkipped = 0;
 
-        // First pass: collect symbols and their kinds
+        // Map to store symbol definition locations (startLine, endLine)
+        Map<String, int[]> symbolLocationMap = new HashMap<>();
+
+        // First pass: collect symbols, their kinds, and definition locations
         for (Scip.Document doc : index.getDocumentsList()) {
             String relativePath = doc.getRelativePath();
+            
+            // Collect definition locations from occurrences
+            for (Scip.Occurrence occ : doc.getOccurrencesList()) {
+                String occSymbol = occ.getSymbol();
+                if (occSymbol == null || occSymbol.isEmpty()) continue;
+                
+                // Check if this is a definition occurrence (symbolRoles contains Definition bit)
+                int roles = occ.getSymbolRoles();
+                boolean isDefinition = (roles & 1) != 0; // Definition = 1 in SymbolRole enum
+                
+                if (isDefinition && occ.getRangeCount() >= 1) {
+                    int startLine = occ.getRange(0);
+                    int endLine = occ.getRangeCount() >= 3 ? occ.getRange(2) : startLine;
+                    
+                    String qualifiedId = isLocalSymbol(occSymbol) 
+                        ? qualifyLocalSymbol(occSymbol, relativePath) 
+                        : occSymbol;
+                    symbolLocationMap.put(qualifiedId, new int[]{startLine + 1, endLine + 1}); // Convert to 1-based
+                }
+            }
+            
             for (Scip.SymbolInformation symbolInfo : doc.getSymbolsList()) {
                 String symbolId = symbolInfo.getSymbol();
                 if (symbolId != null && !symbolId.isEmpty()) {
@@ -161,7 +185,7 @@ public class ScipToGraphMapper {
                     }
                 }
 
-                Symbol symbol = mapSymbol(symbolInfo, relativePath, includeLocalSymbols, symbolKindMap);
+                Symbol symbol = mapSymbol(symbolInfo, relativePath, includeLocalSymbols, symbolKindMap, symbolLocationMap);
                 if (symbol != null) {
                     symbols.add(symbol);
                     symbolsProcessed++;
@@ -297,7 +321,8 @@ public class ScipToGraphMapper {
     }
 
     private Symbol mapSymbol(Scip.SymbolInformation symbolInfo, String filePath, 
-                            boolean includeLocalSymbols, Map<String, SymbolKind> symbolKindMap) {
+                            boolean includeLocalSymbols, Map<String, SymbolKind> symbolKindMap,
+                            Map<String, int[]> symbolLocationMap) {
         String symbolName = symbolInfo.getSymbol();
         if (symbolName == null || symbolName.isEmpty()) {
             return null;
@@ -334,12 +359,19 @@ public class ScipToGraphMapper {
         // Get metadata from strategy
         LanguageMappingStrategy.SymbolMetadata metadata = strategy.getSymbolMetadata(symbolInfo);
 
+        // Get location from definition occurrence
+        int[] location = symbolLocationMap.get(qualifiedId);
+        int startLine = location != null ? location[0] : 0;
+        int endLine = location != null ? location[1] : 0;
+
         return Symbol.builder()
             .id(qualifiedId)
             .name(simpleName)
             .fullyQualifiedName(qualifiedId)
             .kind(kind)
             .filePath(filePath)
+            .startLine(startLine)
+            .endLine(endLine)
             .documentation(documentation)
             .signature(signature)
             .displayName(displayName)
