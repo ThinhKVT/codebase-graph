@@ -3,6 +3,8 @@ package org.example.graph;
 import org.example.model.*;
 import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.Value;
+import org.neo4j.driver.types.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -414,6 +416,50 @@ public class Neo4jGraphStore implements GraphStore {
         try (Session session = session()) {
             session.run(cypher);
         }
+    }
+
+    @Override
+    public List<Map<String, Object>> runQuery(String cypher, Map<String, Object> params) {
+        ensureConnected();
+        Map<String, Object> safeParams = params != null ? params : Map.of();
+        try (Session session = session()) {
+            var result = session.run(cypher, safeParams);
+            List<Map<String, Object>> rows = new ArrayList<>();
+            while (result.hasNext()) {
+                Record rec = result.next();
+                Map<String, Object> row = new LinkedHashMap<>();
+                for (String key : rec.keys()) {
+                    row.put(key, valueToObject(rec.get(key)));
+                }
+                rows.add(row);
+            }
+            return rows;
+        }
+    }
+
+    /** Convert Neo4j Value to JSON-serializable Object. */
+    private static Object valueToObject(Value v) {
+        if (v == null || v.isNull()) return null;
+        return switch (v.type().name()) {
+            case "NODE" -> nodeToMap(v.asNode());
+            case "STRING" -> v.asString();
+            case "INTEGER" -> v.asLong();
+            case "FLOAT" -> v.asDouble();
+            case "BOOLEAN" -> v.asBoolean();
+            case "LIST" -> v.asList(Neo4jGraphStore::valueToObject);
+            case "MAP" -> v.asMap(Neo4jGraphStore::valueToObject);
+            default -> v.asObject();
+        };
+    }
+
+    private static Map<String, Object> nodeToMap(Node n) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("_id", n.elementId());
+        List<String> labels = new ArrayList<>();
+        n.labels().forEach(labels::add);
+        m.put("_labels", labels);
+        m.putAll(n.asMap(Neo4jGraphStore::valueToObject));
+        return m;
     }
 }
 

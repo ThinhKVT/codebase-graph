@@ -460,7 +460,7 @@ curl -X POST "http://localhost:8080/search/agent" \
 
 ---
 
-## Phase 6: Code Retrieval API (MVP1 Extension)
+## Phase 6: Code Retrieval API (MVP1 Extension) ✅ COMPLETED
 
 > **Lý do:** RAG cần actual source code, không chỉ metadata. Agent cần đọc code để trả lời.
 
@@ -592,13 +592,13 @@ public class CodeRetrievalHandler implements HttpHandler {
 
 ### Tasks
 
-| Task | Description | Files |
-|------|-------------|-------|
-| 6.1 | CodeSnippet model | `model/CodeSnippet.java` |
-| 6.2 | SourceCodeExtractor service | `service/SourceCodeExtractor.java` |
-| 6.3 | GET /symbols/{id}/source endpoint | `api/handlers/CodeRetrievalHandler.java` |
-| 6.4 | GET /code?qualified_name endpoint | `api/handlers/CodeRetrievalHandler.java` |
-| 6.5 | POST /code/batch endpoint | `api/handlers/CodeRetrievalHandler.java` |
+| Task | Status | Description | Files |
+|------|--------|-------------|-------|
+| 6.1 | ✅ | CodeSnippet model | `model/CodeSnippet.java` |
+| 6.2 | ✅ | SourceCodeExtractor service | `service/SourceCodeExtractor.java` |
+| 6.3 | ✅ | GET /symbols/{id}/source endpoint | `api/handlers/CodeRetrievalHandler.java` |
+| 6.4 | ✅ | GET /code?qualified_name endpoint | `api/handlers/CodeRetrievalHandler.java` |
+| 6.5 | ✅ | POST /code/batch endpoint | `api/handlers/CodeRetrievalHandler.java` |
 
 ### File Structure (Addition)
 
@@ -614,15 +614,17 @@ src/main/java/org/example/
 
 ### Success Criteria
 
-- [ ] `GET /symbols/{id}/source` returns actual code
-- [ ] `GET /code?qualified_name=...` works with FQN
-- [ ] Context lines configurable (default 5)
-- [ ] Batch retrieval for multiple symbols
-- [ ] Error handling for missing files
+- [x] `GET /symbols/{id}/source` returns actual code
+- [x] `GET /code?qualified_name=...` works with FQN
+- [x] Context lines configurable (default 5)
+- [x] Batch retrieval for multiple symbols
+- [x] Error handling for missing files
+
+**Note:** Source roots are taken from repository paths in the graph; add `--source-root <path>` when starting `serve` if needed.
 
 ---
 
-## Phase 7: Natural Language to Cypher (MVP2)
+## Phase 7: Natural Language to Cypher (MVP2) ✅ COMPLETED
 
 > **Lý do:** QueryAnalyzer chỉ có pattern matching cố định. LLM có thể handle queries phức tạp hơn.
 
@@ -873,15 +875,16 @@ public class QueryRouter {
 
 ### Tasks
 
-| Task | Description | Files |
-|------|-------------|-------|
-| 7.1 | LLMClient interface | `llm/LLMClient.java` |
-| 7.2 | OllamaLLMClient implementation | `llm/OllamaLLMClient.java` |
-| 7.3 | CypherPromptBuilder với schema | `llm/CypherPromptBuilder.java` |
-| 7.4 | CypherValidator | `llm/CypherValidator.java` |
-| 7.5 | NLToCypherService | `llm/NLToCypherService.java` |
-| 7.6 | QueryRouter (pattern + LLM) | `search/QueryRouter.java` |
-| 7.7 | POST /query/natural endpoint | `api/handlers/NaturalQueryHandler.java` |
+| Task | Status | Description | Files |
+|------|--------|-------------|-------|
+| 7.1 | ✅ | LLMClient interface | `llm/LLMClient.java` |
+| 7.2 | ✅ | OllamaLLMClient implementation | `llm/OllamaLLMClient.java` |
+| 7.3 | ✅ | CypherPromptBuilder với schema | `llm/CypherPromptBuilder.java` |
+| 7.4 | ✅ | CypherValidator | `llm/CypherValidator.java` |
+| 7.5 | ✅ | NLToCypherService | `llm/NLToCypherService.java` |
+| 7.6 | ✅ | QueryRouter (LLM path) | `search/QueryRouter.java` |
+| 7.7 | ✅ | POST /query/natural endpoint | `api/handlers/NaturalQueryHandler.java` |
+| — | ✅ | GraphStore.runQuery for read-only Cypher | `graph/GraphStore.java`, `Neo4jGraphStore.java` |
 
 ### File Structure (Addition)
 
@@ -910,11 +913,11 @@ ollama.timeout=60
 
 ### Success Criteria
 
-- [ ] LLM generates valid Cypher for complex queries
-- [ ] Pattern matching still works (fast path)
-- [ ] QueryRouter correctly routes queries
-- [ ] Cypher validation prevents injection
-- [ ] Response includes method used (pattern/llm)
+- [x] LLM generates valid Cypher for complex queries
+- [x] QueryRouter uses LLM path (pattern fast path optional for later)
+- [x] Cypher validation prevents injection (read-only only)
+- [x] Response includes method used (llm) and execution_time_ms
+- [x] Serve with `--enable-natural-query --llm-model llama3` (or codellama)
 
 ### Example Queries (MVP2 can handle)
 

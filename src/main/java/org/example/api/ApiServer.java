@@ -3,7 +3,9 @@ package org.example.api;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.json.JavalinJackson;
+import org.example.api.handlers.CodeRetrievalHandler;
 import org.example.api.handlers.DependencyHandler;
+import org.example.api.handlers.NaturalQueryHandler;
 import org.example.api.handlers.ReferenceHandler;
 import org.example.api.handlers.SearchHandler;
 import org.example.api.handlers.SymbolHandler;
@@ -12,8 +14,16 @@ import org.example.graph.GraphStore;
 import org.example.query.DependencyQuery;
 import org.example.query.ReferenceQuery;
 import org.example.query.SymbolQuery;
+import org.example.llm.LLMClient;
+import org.example.llm.NLToCypherService;
+import org.example.search.QueryRouter;
+import org.example.service.SourceCodeExtractor;
 import org.example.vector.VectorStore;
 import org.slf4j.Logger;
+
+import java.nio.file.Path;
+import java.util.List;
+
 import org.slf4j.LoggerFactory;
 
 /**
@@ -42,6 +52,12 @@ public class ApiServer {
     private VectorStore vectorStore;
     private String collectionName;
 
+    // Optional services for code retrieval
+    private List<Path> sourceRoots;
+
+    // Optional: natural language to Cypher (MVP2)
+    private LLMClient llmClient;
+
     public ApiServer(GraphStore graphStore, int port) {
         this.graphStore = graphStore;
         this.port = port;
@@ -55,6 +71,23 @@ public class ApiServer {
         this.embeddingService = embeddingService;
         this.vectorStore = vectorStore;
         this.collectionName = collectionName;
+        return this;
+    }
+
+    /**
+     * Enable code retrieval (source code by symbol ID / FQN).
+     * Base paths are used to resolve relative file paths (e.g. repository roots).
+     */
+    public ApiServer withCodeRetrieval(List<Path> sourceRoots) {
+        this.sourceRoots = sourceRoots != null ? List.copyOf(sourceRoots) : List.of();
+        return this;
+    }
+
+    /**
+     * Enable natural language to Cypher (POST /query/natural). Requires LLM (e.g. Ollama).
+     */
+    public ApiServer withNaturalQuery(LLMClient llmClient) {
+        this.llmClient = llmClient;
         return this;
     }
 
@@ -145,6 +178,25 @@ public class ApiServer {
 
         // Reference endpoints
         app.get("/symbols/{id}/references", referenceHandler::getReferences);
+
+        // Code retrieval (source by symbol)
+        if (sourceRoots != null && !sourceRoots.isEmpty()) {
+            SourceCodeExtractor extractor = new SourceCodeExtractor(sourceRoots);
+            CodeRetrievalHandler codeHandler = new CodeRetrievalHandler(graphStore, extractor);
+            app.get("/symbols/{id}/source", codeHandler::getSymbolSource);
+            app.get("/code", codeHandler::getCode);
+            app.post("/code/batch", codeHandler::getCodeBatch);
+            logger.info("Registered code retrieval endpoints (/symbols/{id}/source, /code, /code/batch)");
+        }
+
+        // Natural language to Cypher (MVP2)
+        if (llmClient != null && llmClient.isAvailable()) {
+            NLToCypherService nlService = new NLToCypherService(llmClient);
+            QueryRouter queryRouter = new QueryRouter(nlService);
+            NaturalQueryHandler naturalHandler = new NaturalQueryHandler(graphStore, queryRouter);
+            app.post("/query/natural", naturalHandler::handle);
+            logger.info("Registered natural query endpoint (POST /query/natural)");
+        }
 
         // Dependency endpoints
         app.get("/symbols/{id}/dependencies", dependencyHandler::getDependencies);

@@ -7,11 +7,16 @@ import org.example.embedding.EmbeddingService;
 import org.example.embedding.OllamaEmbeddingService;
 import org.example.graph.GraphStore;
 import org.example.graph.Neo4jGraphStore;
+import org.example.llm.LLMClient;
+import org.example.llm.OllamaLLMClient;
 import org.example.vector.QdrantVectorStore;
 import org.example.vector.VectorStore;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
@@ -49,6 +54,15 @@ public class ServeCommand implements Callable<Integer> {
 
     @Option(names = {"--collection"}, description = "Qdrant collection name", defaultValue = "code_symbols")
     private String collectionName;
+
+    @Option(names = {"--source-root"}, description = "Base path(s) to resolve source files (default: repository paths from graph)")
+    private String[] sourceRootsOption;
+
+    @Option(names = {"--enable-natural-query"}, description = "Enable natural language to Cypher (POST /query/natural, requires Ollama)")
+    private boolean enableNaturalQuery;
+
+    @Option(names = {"--llm-model"}, description = "Ollama model for Cypher generation", defaultValue = "llama3")
+    private String llmModel;
 
     @Override
     public Integer call() {
@@ -99,6 +113,37 @@ public class ServeCommand implements Callable<Integer> {
                 }
             }
 
+            // Code retrieval: use repository paths from graph + any --source-root
+            List<Path> sourceRoots = new ArrayList<>();
+            graphStore.findAllRepositories().stream()
+                .map(r -> Path.of(r.path()))
+                .forEach(sourceRoots::add);
+            if (sourceRootsOption != null) {
+                for (String root : sourceRootsOption) {
+                    if (root != null && !root.isBlank()) {
+                        sourceRoots.add(Path.of(root).toAbsolutePath().normalize());
+                    }
+                }
+            }
+            if (!sourceRoots.isEmpty()) {
+                server.withCodeRetrieval(sourceRoots);
+                System.out.println("Code retrieval enabled with " + sourceRoots.size() + " source root(s)");
+            }
+
+            // Natural language to Cypher (MVP2)
+            boolean naturalQueryEnabled = false;
+            if (enableNaturalQuery) {
+                String ollamaBaseUrl = "http://" + ollamaHost + ":" + ollamaPort;
+                LLMClient llmClient = new OllamaLLMClient(ollamaBaseUrl, llmModel, 60);
+                if (llmClient.isAvailable()) {
+                    server.withNaturalQuery(llmClient);
+                    naturalQueryEnabled = true;
+                    System.out.println("Natural query enabled (POST /query/natural, model: " + llmModel + ")");
+                } else {
+                    System.err.println("Warning: Ollama not available at " + ollamaBaseUrl + ", natural query disabled.");
+                }
+            }
+
             server.start();
 
             System.out.println();
@@ -116,7 +161,18 @@ public class ServeCommand implements Callable<Integer> {
             System.out.println("  GET /symbols/{id}/references     - Get references to symbol");
             System.out.println("  GET /symbols/{id}/dependencies   - Get symbol dependencies");
             System.out.println("  GET /symbols/{id}/dependents     - Get symbols depending on this");
-            
+            if (!sourceRoots.isEmpty()) {
+                System.out.println();
+                System.out.println("Code Retrieval endpoints:");
+                System.out.println("  GET  /symbols/{id}/source       - Get source code by symbol ID");
+                System.out.println("  GET  /code?qualified_name=...   - Get source by FQN");
+                System.out.println("  POST /code/batch               - Batch source retrieval");
+            }
+            if (naturalQueryEnabled) {
+                System.out.println();
+                System.out.println("Natural Query endpoint:");
+                System.out.println("  POST /query/natural   - Natural language to Cypher");
+            }
             if (enableSemantic && vectorStore != null) {
                 System.out.println();
                 System.out.println("Semantic Search endpoints:");
