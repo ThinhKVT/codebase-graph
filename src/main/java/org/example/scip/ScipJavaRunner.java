@@ -69,6 +69,9 @@ public class ScipJavaRunner implements ScipRunner {
             throw ScipException.notInstalled();
         }
 
+        // Fix mvnw line endings if needed (crucial for Docker/Linux execution of Windows-checked-out files)
+        fixMvnwLineEndings();
+
         Path scipFile = outputPath != null ? outputPath : workingDirectory.resolve("index.scip");
 
         List<String> command = new ArrayList<>();
@@ -148,5 +151,24 @@ public class ScipJavaRunner implements ScipRunner {
     @Override
     public String getToolVersion() {
         return getVersion();
+    }
+
+    private void fixMvnwLineEndings() {
+        Path mvnwPath = workingDirectory.resolve("mvnw");
+        if (Files.exists(mvnwPath)) {
+            try {
+                // Read as ISO-8859-1 to avoid UTF-8 decoding errors if binary data is somehow present,
+                // though mvnw should be text. UTF-8 is safer for shell scripts.
+                String content = Files.readString(mvnwPath);
+                if (content.contains("\r\n")) {
+                    logger.info("Detected CRLF line endings in mvnw. Converting to LF to ensure Linux compatibility...");
+                    content = content.replace("\r\n", "\n");
+                    Files.writeString(mvnwPath, content);
+                    logger.info("Successfully converted mvnw line endings to LF.");
+                }
+            } catch (IOException e) {
+                logger.warn("Failed to check/fix mvnw line endings: {}", e.getMessage());
+            }
+        }
     }
 }
