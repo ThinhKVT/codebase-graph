@@ -1,8 +1,8 @@
 package org.example.scip;
 
+import org.example.scip.runner.ScipJavaRunner;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import scip.Scip;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

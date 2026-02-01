@@ -1,6 +1,8 @@
 package org.example.scip;
 
 import org.example.model.*;
+import org.example.scip.mapper.LanguageMappingStrategy;
+import org.example.scip.mapper.MappingStrategyFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scip.Scip;
@@ -9,6 +11,9 @@ import java.util.*;
 
 /**
  * Maps SCIP entities to domain model objects.
+ * 
+ * <p>Uses {@link LanguageMappingStrategy} for language-specific processing
+ * such as dependency injection detection and CONTAINS relationships.</p>
  */
 public class ScipToGraphMapper {
 
@@ -17,9 +22,41 @@ public class ScipToGraphMapper {
     // Prefix for local symbols in SCIP
     private static final String LOCAL_SYMBOL_PREFIX = "local ";
 
+    // Strategy for language-specific mapping
+    private final LanguageMappingStrategy strategy;
+
+    /**
+     * Create mapper with default (Java) strategy.
+     */
+    public ScipToGraphMapper() {
+        this.strategy = MappingStrategyFactory.create(LanguageSupport.JAVA);
+    }
+
+    /**
+     * Create mapper with specific strategy.
+     */
+    public ScipToGraphMapper(LanguageMappingStrategy strategy) {
+        this.strategy = strategy;
+    }
+
+    /**
+     * Factory method to create mapper for a specific language.
+     */
+    public static ScipToGraphMapper forLanguage(String language) {
+        LanguageMappingStrategy strat = MappingStrategyFactory.create(language);
+        return new ScipToGraphMapper(strat);
+    }
+
+    /**
+     * Factory method to create mapper for a specific language.
+     */
+    public static ScipToGraphMapper forLanguage(LanguageSupport language) {
+        LanguageMappingStrategy strat = MappingStrategyFactory.create(language);
+        return new ScipToGraphMapper(strat);
+    }
+
     /**
      * Check if a symbol is a local symbol (local variable within a method/function).
-     * Local symbols have the format "local <id>" (e.g., "local 0", "local 1").
      */
     private boolean isLocalSymbol(String symbolId) {
         return symbolId != null && symbolId.startsWith(LOCAL_SYMBOL_PREFIX);
@@ -27,7 +64,6 @@ public class ScipToGraphMapper {
 
     /**
      * Create a qualified ID for local symbols to avoid conflicts across files.
-     * Format: "local:<filePath>:<localId>"
      */
     private String qualifyLocalSymbol(String symbolId, String filePath) {
         if (isLocalSymbol(symbolId)) {
@@ -50,38 +86,43 @@ public class ScipToGraphMapper {
 
     /**
      * Map a SCIP index to domain model objects.
-     *
-     * @param includeLocalSymbols if true, include local symbols (local variables); if false, skip them
      */
     public MappingResult map(Scip.Index index, String repositoryPath) {
-        return map(index, repositoryPath, false); // Default: skip local symbols
+        return map(index, repositoryPath, false);
     }
 
     /**
      * Map a SCIP index to domain model objects.
      *
-     * @param includeLocalSymbols if true, include local symbols (local variables); if false, skip them
+     * @param index The SCIP index to map
+     * @param repositoryPath Path to the repository
+     * @param includeLocalSymbols if true, include local symbols (local variables)
      */
     public MappingResult map(Scip.Index index, String repositoryPath, boolean includeLocalSymbols) {
         List<SourceFile> sourceFiles = new ArrayList<>();
         List<Symbol> symbols = new ArrayList<>();
         List<Reference> references = new ArrayList<>();
 
-        // First pass: collect all symbol IDs and their kinds so we can validate references
+        // Collect all symbol information for strategy processing
+        List<Scip.SymbolInformation> allSymbolInfos = new ArrayList<>();
+
+        // First pass: collect all symbol IDs and their kinds
         Set<String> definedSymbolIds = new HashSet<>();
-        Map<String, SymbolKind> symbolKindMap = new HashMap<>(); // Track symbol kinds for CALL detection
+        Map<String, SymbolKind> symbolKindMap = new HashMap<>();
 
         int documentsProcessed = 0;
         int symbolsProcessed = 0;
         int occurrencesProcessed = 0;
         int localSymbolsSkipped = 0;
 
-        // First pass: collect symbols and their kinds (skip local symbols if not included)
+        // First pass: collect symbols and their kinds
         for (Scip.Document doc : index.getDocumentsList()) {
             String relativePath = doc.getRelativePath();
             for (Scip.SymbolInformation symbolInfo : doc.getSymbolsList()) {
                 String symbolId = symbolInfo.getSymbol();
                 if (symbolId != null && !symbolId.isEmpty()) {
+                    allSymbolInfos.add(symbolInfo);
+                    
                     if (isLocalSymbol(symbolId)) {
                         if (includeLocalSymbols) {
                             String qualifiedId = qualifyLocalSymbol(symbolId, relativePath);
@@ -109,14 +150,10 @@ public class ScipToGraphMapper {
             );
             sourceFiles.add(sourceFile);
 
-            // Track symbols defined in this document for occurrence mapping
-            Map<String, String> definitionSymbols = new HashMap<>();
-
-            // Process symbols and extract relationships
+            // Process symbols
             for (Scip.SymbolInformation symbolInfo : doc.getSymbolsList()) {
                 String symbolId = symbolInfo.getSymbol();
 
-                // Skip local symbols if not included
                 if (isLocalSymbol(symbolId)) {
                     if (!includeLocalSymbols) {
                         localSymbolsSkipped++;
@@ -124,27 +161,22 @@ public class ScipToGraphMapper {
                     }
                 }
 
-                Symbol symbol = mapSymbol(symbolInfo, relativePath, includeLocalSymbols);
+                Symbol symbol = mapSymbol(symbolInfo, relativePath, includeLocalSymbols, symbolKindMap);
                 if (symbol != null) {
                     symbols.add(symbol);
                     symbolsProcessed++;
 
-                    String qualifiedId = isLocalSymbol(symbolId)
-                        ? qualifyLocalSymbol(symbolId, relativePath)
-                        : symbolId;
-                    definitionSymbols.put(symbolId, qualifiedId);
-
                     // Extract relationships (EXTENDS, IMPLEMENTS, TYPE_DEFINITION)
-                    // Skip relationships for local symbols as they are not meaningful
                     if (!isLocalSymbol(symbolId)) {
-                        List<Reference> relationshipRefs = mapRelationships(symbolInfo, relativePath, definedSymbolIds, symbolKindMap);
+                        List<Reference> relationshipRefs = mapRelationships(
+                            symbolInfo, relativePath, definedSymbolIds, symbolKindMap);
                         references.addAll(relationshipRefs);
                         occurrencesProcessed += relationshipRefs.size();
                     }
                 }
             }
 
-            // Process occurrences - find the enclosing symbol for each occurrence
+            // Process occurrences
             String currentEnclosingSymbol = null;
             for (Scip.Occurrence occ : doc.getOccurrencesList()) {
                 String occSymbol = occ.getSymbol();
@@ -152,40 +184,29 @@ public class ScipToGraphMapper {
                     continue;
                 }
 
-                // Skip local symbols in occurrences if not included
                 if (isLocalSymbol(occSymbol) && !includeLocalSymbols) {
                     continue;
                 }
 
                 ReferenceKind baseKind = ReferenceKind.fromScipRole(occ.getSymbolRoles());
-
-                // Qualify local symbol if needed
                 String qualifiedOccSymbol = isLocalSymbol(occSymbol)
                     ? qualifyLocalSymbol(occSymbol, relativePath)
                     : occSymbol;
 
-                // If this is a definition, update the current enclosing symbol
                 if (baseKind == ReferenceKind.DEFINITION) {
-                    // Only use non-local symbols as enclosing symbols
                     if (!isLocalSymbol(occSymbol)) {
                         currentEnclosingSymbol = occSymbol;
                     }
-                    continue; // Skip creating reference for definition itself
+                    continue;
                 }
 
-                // For references, create a reference from the enclosing symbol to the referenced symbol
                 if (currentEnclosingSymbol != null && definedSymbolIds.contains(qualifiedOccSymbol)) {
-                    // Don't create self-references
                     if (!currentEnclosingSymbol.equals(qualifiedOccSymbol)) {
-                        int line = 0;
-                        int column = 0;
-                        if (occ.getRangeCount() >= 2) {
-                            line = occ.getRange(0);
-                            column = occ.getRange(1);
-                        }
+                        int line = occ.getRangeCount() >= 1 ? occ.getRange(0) : 0;
+                        int column = occ.getRangeCount() >= 2 ? occ.getRange(1) : 0;
 
-                        // Determine the actual reference kind based on target symbol type
-                        ReferenceKind actualKind = determineReferenceKind(baseKind, qualifiedOccSymbol, symbolKindMap);
+                        ReferenceKind actualKind = determineReferenceKind(
+                            baseKind, qualifiedOccSymbol, symbolKindMap);
 
                         Reference ref = Reference.builder()
                             .fromSymbolId(currentEnclosingSymbol)
@@ -204,8 +225,43 @@ public class ScipToGraphMapper {
             documentsProcessed++;
         }
 
+        // ============= Language-Specific Processing (Strategy Pattern) =============
+
+        // Extract CONTAINS relationships using strategy
+        try {
+            List<Reference> containsRefs = strategy.extractContainsRelationships(
+                allSymbolInfos, symbolKindMap);
+            references.addAll(containsRefs);
+            logger.debug("Added {} CONTAINS relationships", containsRefs.size());
+        } catch (Exception e) {
+            logger.warn("Failed to extract CONTAINS relationships: {}", e.getMessage());
+        }
+
+        // Extract type relationships using strategy
+        try {
+            for (Scip.SymbolInformation symbolInfo : allSymbolInfos) {
+                List<Reference> typeRefs = strategy.extractTypeRelationships(
+                    symbolInfo, symbolKindMap);
+                references.addAll(typeRefs);
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to extract type relationships: {}", e.getMessage());
+        }
+
+        // Extract dependency injection relationships using strategy
+        try {
+            List<Reference> diRefs = strategy.extractDependencyInjection(
+                symbols, references, symbolKindMap);
+            references.addAll(diRefs);
+            logger.debug("Added {} INJECTS relationships", diRefs.size());
+        } catch (Exception e) {
+            logger.warn("Failed to extract DI relationships: {}", e.getMessage());
+        }
+
+        // ============= End Strategy Processing =============
+
         if (localSymbolsSkipped > 0) {
-            logger.info("Skipped {} local symbols (local variables)", localSymbolsSkipped);
+            logger.info("Skipped {} local symbols", localSymbolsSkipped);
         }
         logger.info("Mapped {} documents, {} symbols, {} references",
             documentsProcessed, symbolsProcessed, references.size());
@@ -216,40 +272,37 @@ public class ScipToGraphMapper {
 
     /**
      * Determine the actual reference kind based on SCIP role and target symbol kind.
-     * This helps distinguish CALL (method invocation) from TYPE_REF (type usage).
      */
-    private ReferenceKind determineReferenceKind(ReferenceKind baseKind, String targetSymbolId, Map<String, SymbolKind> symbolKindMap) {
-        // If it's already a specific kind (IMPORT, WRITE, READ), keep it
+    private ReferenceKind determineReferenceKind(
+            ReferenceKind baseKind, String targetSymbolId, Map<String, SymbolKind> symbolKindMap) {
+        
         if (baseKind != ReferenceKind.REFERENCE) {
             return baseKind;
         }
 
-        // Look up the target symbol kind to determine if it's a CALL, TYPE_REF, etc.
         SymbolKind targetKind = symbolKindMap.get(targetSymbolId);
         if (targetKind != null) {
             return ReferenceKind.fromTargetSymbolKind(targetKind);
         }
 
-        // Fallback: try to infer from symbol ID pattern
+        // Fallback: infer from symbol ID pattern
         if (targetSymbolId.contains("(") && targetSymbolId.contains(").")) {
-            // Method signature pattern: "methodName()."
             return ReferenceKind.CALL;
         }
         if (targetSymbolId.endsWith("#")) {
-            // Type pattern: "ClassName#"
             return ReferenceKind.TYPE_REF;
         }
 
         return baseKind;
     }
 
-    private Symbol mapSymbol(Scip.SymbolInformation symbolInfo, String filePath, boolean includeLocalSymbols) {
+    private Symbol mapSymbol(Scip.SymbolInformation symbolInfo, String filePath, 
+                            boolean includeLocalSymbols, Map<String, SymbolKind> symbolKindMap) {
         String symbolName = symbolInfo.getSymbol();
         if (symbolName == null || symbolName.isEmpty()) {
             return null;
         }
 
-        // Qualify local symbols with file path
         String qualifiedId = isLocalSymbol(symbolName)
             ? qualifyLocalSymbol(symbolName, filePath)
             : symbolName;
@@ -257,20 +310,29 @@ public class ScipToGraphMapper {
         String simpleName = extractSimpleName(symbolName);
         SymbolKind kind = mapSymbolKind(symbolInfo.getKind());
 
-        // Local symbols are typically variables
         if (isLocalSymbol(symbolName) && kind == SymbolKind.UNKNOWN) {
             kind = SymbolKind.VARIABLE;
         }
 
-        String documentation = null;
-        if (symbolInfo.getDocumentationCount() > 0) {
-            documentation = String.join("\n", symbolInfo.getDocumentationList());
+        String documentation = symbolInfo.getDocumentationCount() > 0
+            ? String.join("\n", symbolInfo.getDocumentationList())
+            : null;
+
+        String signature = symbolInfo.hasSignatureDocumentation()
+            ? symbolInfo.getSignatureDocumentation().getText()
+            : null;
+
+        // Get display name if available
+        String displayName = symbolInfo.getDisplayName();
+        if (displayName == null || displayName.isEmpty()) {
+            displayName = null;
         }
 
-        String signature = null;
-        if (symbolInfo.hasSignatureDocumentation()) {
-            signature = symbolInfo.getSignatureDocumentation().getText();
-        }
+        // Parse parent ID using strategy
+        String parentId = strategy.parseParentSymbolId(symbolName);
+
+        // Get metadata from strategy
+        LanguageMappingStrategy.SymbolMetadata metadata = strategy.getSymbolMetadata(symbolInfo);
 
         return Symbol.builder()
             .id(qualifiedId)
@@ -280,18 +342,21 @@ public class ScipToGraphMapper {
             .filePath(filePath)
             .documentation(documentation)
             .signature(signature)
+            .displayName(displayName)
+            .parentId(parentId)
+            .isStatic(metadata.isStatic())
+            .isAbstract(metadata.isAbstract())
+            .isFinal(metadata.isFinal())
+            .visibility(metadata.visibility())
+            .isGenerated(metadata.isGenerated())
+            .isTest(metadata.isTest())
             .build();
     }
 
-    // Keep backward compatible overload
-    private Symbol mapSymbol(Scip.SymbolInformation symbolInfo, String filePath) {
-        return mapSymbol(symbolInfo, filePath, false);
-    }
-
-    /**
-     * Extract relationships from SymbolInformation to create EXTENDS, IMPLEMENTS, TYPE_DEFINITION references.
-     */
-    private List<Reference> mapRelationships(Scip.SymbolInformation symbolInfo, String filePath, Set<String> definedSymbolIds, Map<String, SymbolKind> symbolKindMap) {
+    private List<Reference> mapRelationships(
+            Scip.SymbolInformation symbolInfo, String filePath,
+            Set<String> definedSymbolIds, Map<String, SymbolKind> symbolKindMap) {
+        
         List<Reference> refs = new ArrayList<>();
         String fromSymbol = symbolInfo.getSymbol();
         SymbolKind fromKind = symbolKindMap.get(fromSymbol);
@@ -305,31 +370,27 @@ public class ScipToGraphMapper {
             ReferenceKind kind = null;
             SymbolKind toKind = symbolKindMap.get(toSymbol);
 
-            // Map relationship flags to ReferenceKind
             if (rel.getIsImplementation()) {
-                // Distinguish IMPLEMENTS vs EXTENDS based on target symbol kind
                 if (toKind == SymbolKind.INTERFACE) {
                     kind = ReferenceKind.IMPLEMENTS;
                 } else if (toKind == SymbolKind.CLASS) {
                     kind = ReferenceKind.EXTENDS;
                 } else {
-                    // Fallback: if source is class/interface, check target symbol pattern
-                    if (toSymbol.endsWith("#") || toSymbol.contains("#")) {
-                        // Could be either - default to IMPLEMENTS for is_implementation flag
-                        kind = ReferenceKind.IMPLEMENTS;
-                    } else {
-                        kind = ReferenceKind.IMPLEMENTS;
-                    }
+                    kind = ReferenceKind.IMPLEMENTS;
                 }
             } else if (rel.getIsTypeDefinition()) {
-                kind = ReferenceKind.TYPE_DEFINITION;
-            } else if (rel.getIsReference()) {
-                // Determine more specific kind based on target symbol
-                if (toKind != null) {
-                    kind = ReferenceKind.fromTargetSymbolKind(toKind);
+                // Use strategy to determine HAS_TYPE vs RETURNS_TYPE
+                if (fromKind != null && fromKind.isCallable()) {
+                    kind = ReferenceKind.RETURNS_TYPE;
+                } else if (fromKind != null && (fromKind.isField() || fromKind == SymbolKind.PARAMETER)) {
+                    kind = ReferenceKind.HAS_TYPE;
                 } else {
-                    kind = ReferenceKind.REFERENCE;
+                    kind = ReferenceKind.TYPE_DEFINITION;
                 }
+            } else if (rel.getIsReference()) {
+                kind = toKind != null 
+                    ? ReferenceKind.fromTargetSymbolKind(toKind) 
+                    : ReferenceKind.REFERENCE;
             } else if (rel.getIsDefinition()) {
                 kind = ReferenceKind.DEFINITION;
             }
@@ -344,7 +405,6 @@ public class ScipToGraphMapper {
                     .column(0)
                     .build();
                 refs.add(ref);
-
                 logger.debug("Mapped relationship: {} -> {} [{}]", fromSymbol, toSymbol, kind);
             }
         }
@@ -386,6 +446,12 @@ public class ScipToGraphMapper {
             case Parameter -> SymbolKind.PARAMETER;
             case TypeParameter -> SymbolKind.TYPE_PARAMETER;
             case Module -> SymbolKind.MODULE;
+            case Struct -> SymbolKind.STRUCT;
+            case Trait -> SymbolKind.TRAIT;
+            case StaticMethod -> SymbolKind.STATIC_METHOD;
+            case StaticField -> SymbolKind.STATIC_FIELD;
+            case AbstractMethod -> SymbolKind.ABSTRACT_METHOD;
+            case Constant -> SymbolKind.CONSTANT;
             default -> SymbolKind.UNKNOWN;
         };
     }
