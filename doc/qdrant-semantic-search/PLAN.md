@@ -296,50 +296,64 @@ public class CodeSearchAgent {
 
 ## MVP1 Tasks Breakdown
 
-### Phase 1: Infrastructure Setup
+### Phase 1: Infrastructure Setup ✅ COMPLETED
 
-| Task | Description | Files |
-|------|-------------|-------|
-| 1.1 | Add Qdrant + Ollama to docker-compose.yml | `docker-compose.yml` |
-| 1.2 | Create QdrantConfig class | `config/QdrantConfig.java` |
-| 1.3 | Create QdrantClient wrapper | `vector/QdrantClientWrapper.java` |
-| 1.4 | Create collection initialization | `vector/QdrantCollectionManager.java` |
+| Task | Status | Description | Files |
+|------|--------|-------------|-------|
+| 1.1 | ✅ | Add Qdrant + Ollama to docker-compose.yml | `docker-compose.yml` |
+| 1.2 | ✅ | Create QdrantConfig class | `config/QdrantConfig.java` |
+| 1.3 | ✅ | Create OllamaConfig class | `config/OllamaConfig.java` |
+| 1.4 | ✅ | Create VectorStore interface | `vector/VectorStore.java` |
+| 1.5 | ✅ | Create QdrantVectorStore implementation | `vector/QdrantVectorStore.java` |
+| 1.6 | ✅ | Create VectorPoint model | `vector/VectorPoint.java` |
+| 1.7 | ✅ | Create SearchResult model | `vector/SearchResult.java` |
 
-### Phase 2: Embedding Service
+### Phase 2: Embedding Service ✅ COMPLETED
 
-| Task | Description | Files |
-|------|-------------|-------|
-| 2.1 | EmbeddingService interface | `embedding/EmbeddingService.java` |
-| 2.2 | OllamaEmbeddingService | `embedding/OllamaEmbeddingService.java` |
-| 2.3 | CodeContentBuilder | `embedding/CodeContentBuilder.java` |
-| 2.4 | Test embedding generation | `test/.../EmbeddingServiceTest.java` |
+| Task | Status | Description | Files |
+|------|--------|-------------|-------|
+| 2.1 | ✅ | EmbeddingService interface | `embedding/EmbeddingService.java` |
+| 2.2 | ✅ | OllamaEmbeddingService | `embedding/OllamaEmbeddingService.java` |
+| 2.3 | ✅ | EmbeddingException | `embedding/EmbeddingException.java` |
+| 2.4 | ✅ | CodeEmbedder (content builder + indexer) | `embedding/CodeEmbedder.java` |
 
-### Phase 3: Vector Indexing
+### Phase 3: CLI Commands ✅ COMPLETED
 
-| Task | Description | Files |
-|------|-------------|-------|
-| 3.1 | VectorIndexer class | `vector/VectorIndexer.java` |
-| 3.2 | Integrate into IndexCommand | `cli/IndexCommand.java` |
-| 3.3 | Symbol to Qdrant point mapper | `vector/SymbolPointMapper.java` |
-| 3.4 | Batch upsert implementation | `vector/QdrantClientWrapper.java` |
+| Task | Status | Description | Files |
+|------|--------|-------------|-------|
+| 3.1 | ✅ | EmbedCommand (embed symbols) | `cli/EmbedCommand.java` |
+| 3.2 | ✅ | SearchCommand (semantic search) | `cli/SearchCommand.java` |
+| 3.3 | ✅ | Register commands in Main | `Main.java` |
 
-### Phase 4: Hybrid Search
+### Phase 4: Hybrid Search ✅ COMPLETED
 
-| Task | Description | Files |
-|------|-------------|-------|
-| 4.1 | QueryAnalyzer (intent detection) | `search/QueryAnalyzer.java` |
-| 4.2 | SemanticSearchService | `search/SemanticSearchService.java` |
-| 4.3 | Neo4jEnricher | `search/Neo4jEnricher.java` |
-| 4.4 | ResultSynthesizer | `search/ResultSynthesizer.java` |
+| Task | Status | Description | Files |
+|------|--------|-------------|-------|
+| 4.1 | ✅ | SemanticSearchService | `search/SemanticSearchService.java` |
+| 4.2 | ✅ | SemanticSearchResult model | `search/SemanticSearchResult.java` |
+| 4.3 | ✅ | Neo4j enrichment (callers/callees) | Integrated in SemanticSearchService |
+| 4.4 | ✅ | QueryAnalyzer (intent detection) | `search/QueryAnalyzer.java` |
+| 4.5 | ✅ | ResultSynthesizer | `search/ResultSynthesizer.java` |
 
-### Phase 5: Agent & API
+### Phase 5: Agent & API ✅ COMPLETED
 
-| Task | Description | Files |
-|------|-------------|-------|
-| 5.1 | CodeSearchAgent | `agent/CodeSearchAgent.java` |
-| 5.2 | SearchPlan model | `agent/SearchPlan.java` |
-| 5.3 | /search/semantic endpoint | `api/handlers/SearchHandler.java` |
-| 5.4 | /search/agent endpoint | `api/handlers/AgentSearchHandler.java` |
+| Task | Status | Description | Files |
+|------|--------|-------------|-------|
+| 5.1 | ✅ | CodeSearchAgent | `agent/CodeSearchAgent.java` |
+| 5.2 | ✅ | SearchPlan model | `agent/SearchPlan.java` |
+| 5.3 | ✅ | /search/semantic endpoint | `api/handlers/SearchHandler.java` |
+| 5.4 | ✅ | /search/agent endpoint | `api/handlers/SearchHandler.java` |
+| 5.5 | ✅ | AgentSearchCommand (CLI) | `cli/AgentSearchCommand.java` |
+
+## Progress Summary
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| Phase 1 | ✅ | Infrastructure (Docker, Config, VectorStore) |
+| Phase 2 | ✅ | Embedding Service (Ollama integration) |
+| Phase 3 | ✅ | CLI Commands (embed, search, agent) |
+| Phase 4 | ✅ | Hybrid Search (QueryAnalyzer, ResultSynthesizer) |
+| Phase 5 | ✅ | Agent & API (CodeSearchAgent, REST endpoints) |
 
 ## Dependencies
 
@@ -442,4 +456,474 @@ curl "http://localhost:8080/search/semantic?q=authentication"
 curl -X POST "http://localhost:8080/search/agent" \
   -H "Content-Type: application/json" \
   -d '{"query": "find authentication and its callers"}'
+```
+
+---
+
+## Phase 6: Code Retrieval API (MVP1 Extension)
+
+> **Lý do:** RAG cần actual source code, không chỉ metadata. Agent cần đọc code để trả lời.
+
+### API Endpoints
+
+#### GET /symbols/{symbolId}/source
+
+Lấy source code theo Symbol ID từ Neo4j.
+
+```json
+// Request
+GET /symbols/uuid-xxx/source
+
+// Response
+{
+  "symbol_id": "uuid-xxx",
+  "qualified_name": "com.example.AuthService.authenticate",
+  "file_path": "src/main/java/com/example/AuthService.java",
+  "start_line": 45,
+  "end_line": 67,
+  "source_code": "public User authenticate(String username, String password) {\n    // Validate input\n    if (username == null || password == null) {\n        throw new IllegalArgumentException(\"Credentials required\");\n    }\n    \n    User user = userRepository.findByUsername(username);\n    if (user != null && passwordEncoder.matches(password, user.getPassword())) {\n        return user;\n    }\n    return null;\n}",
+  "context": {
+    "before": "// 5 lines before...",
+    "after": "// 5 lines after..."
+  }
+}
+```
+
+#### GET /code
+
+Lấy source code theo qualified name.
+
+```json
+// Request
+GET /code?qualified_name=com.example.AuthService.authenticate&context_lines=5
+
+// Response (same as above)
+```
+
+#### POST /code/batch
+
+Batch retrieval cho nhiều symbols.
+
+```json
+// Request
+POST /code/batch
+{
+  "symbol_ids": ["uuid-1", "uuid-2", "uuid-3"],
+  "context_lines": 3
+}
+
+// Response
+{
+  "results": [
+    { "symbol_id": "uuid-1", "source_code": "...", ... },
+    { "symbol_id": "uuid-2", "source_code": "...", ... },
+    { "symbol_id": "uuid-3", "source_code": "...", ... }
+  ],
+  "errors": []
+}
+```
+
+### Implementation
+
+#### SourceCodeExtractor.java
+
+```java
+public class SourceCodeExtractor {
+    
+    public CodeSnippet extract(String filePath, int startLine, int endLine, int contextLines) {
+        Path path = Path.of(filePath);
+        if (!Files.exists(path)) {
+            throw new FileNotFoundException("Source file not found: " + filePath);
+        }
+        
+        List<String> allLines = Files.readAllLines(path);
+        
+        // Calculate range with context
+        int contextStart = Math.max(0, startLine - contextLines - 1);
+        int contextEnd = Math.min(allLines.size(), endLine + contextLines);
+        
+        // Extract lines
+        List<String> codeLines = allLines.subList(startLine - 1, endLine);
+        List<String> beforeContext = allLines.subList(contextStart, startLine - 1);
+        List<String> afterContext = allLines.subList(endLine, contextEnd);
+        
+        return new CodeSnippet(
+            String.join("\n", codeLines),
+            String.join("\n", beforeContext),
+            String.join("\n", afterContext),
+            startLine,
+            endLine
+        );
+    }
+}
+```
+
+#### CodeRetrievalHandler.java
+
+```java
+public class CodeRetrievalHandler implements HttpHandler {
+    private final Neo4jGraphStore graphStore;
+    private final SourceCodeExtractor extractor;
+    
+    @Override
+    public void handle(HttpExchange exchange) {
+        String symbolId = extractPathParam(exchange, "symbolId");
+        
+        // 1. Get symbol location from Neo4j
+        Symbol symbol = graphStore.findSymbolById(symbolId);
+        if (symbol == null) {
+            sendError(exchange, 404, "Symbol not found");
+            return;
+        }
+        
+        // 2. Extract source code
+        CodeSnippet snippet = extractor.extract(
+            symbol.getFilePath(),
+            symbol.getStartLine(),
+            symbol.getEndLine(),
+            5  // default context lines
+        );
+        
+        // 3. Return response
+        sendJson(exchange, new CodeResponse(symbol, snippet));
+    }
+}
+```
+
+### Tasks
+
+| Task | Description | Files |
+|------|-------------|-------|
+| 6.1 | CodeSnippet model | `model/CodeSnippet.java` |
+| 6.2 | SourceCodeExtractor service | `service/SourceCodeExtractor.java` |
+| 6.3 | GET /symbols/{id}/source endpoint | `api/handlers/CodeRetrievalHandler.java` |
+| 6.4 | GET /code?qualified_name endpoint | `api/handlers/CodeRetrievalHandler.java` |
+| 6.5 | POST /code/batch endpoint | `api/handlers/CodeRetrievalHandler.java` |
+
+### File Structure (Addition)
+
+```
+src/main/java/org/example/
+├── model/
+│   └── CodeSnippet.java          // NEW
+├── service/
+│   └── SourceCodeExtractor.java  // NEW
+└── api/handlers/
+    └── CodeRetrievalHandler.java // NEW
+```
+
+### Success Criteria
+
+- [ ] `GET /symbols/{id}/source` returns actual code
+- [ ] `GET /code?qualified_name=...` works with FQN
+- [ ] Context lines configurable (default 5)
+- [ ] Batch retrieval for multiple symbols
+- [ ] Error handling for missing files
+
+---
+
+## Phase 7: Natural Language to Cypher (MVP2)
+
+> **Lý do:** QueryAnalyzer chỉ có pattern matching cố định. LLM có thể handle queries phức tạp hơn.
+
+### So Sánh Approach
+
+| Aspect | QueryAnalyzer (MVP1) | NL-to-Cypher (MVP2) |
+|--------|---------------------|---------------------|
+| Method | Regex patterns | LLM generation |
+| Flexibility | Fixed patterns | Any query |
+| Accuracy | High cho known patterns | Depends on LLM |
+| Speed | Fast | Slower (LLM call) |
+| Use case | Common queries | Complex/custom queries |
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     QUERY ROUTING                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  User Query ──▶ QueryRouter ──┬──▶ QueryAnalyzer (fast path)    │
+│                               │    - Pattern matched             │
+│                               │    - Use predefined Cypher       │
+│                               │                                  │
+│                               └──▶ NLToCypherService (slow path) │
+│                                    - No pattern match            │
+│                                    - LLM generates Cypher        │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### API Endpoint
+
+#### POST /query/natural
+
+```json
+// Request
+POST /query/natural
+{
+  "query": "Find all classes that have more than 5 methods and are in the service package",
+  "options": {
+    "force_llm": false,  // true = skip pattern matching
+    "validate": true,    // validate generated Cypher
+    "explain": true      // include explanation
+  }
+}
+
+// Response
+{
+  "original_query": "Find all classes that have more than 5 methods...",
+  "method": "llm",  // or "pattern"
+  "generated_cypher": "MATCH (c:Class)-[:DEFINES_METHOD]->(m:Method) WHERE c.qualified_name CONTAINS 'service' WITH c, count(m) as method_count WHERE method_count > 5 RETURN c.name AS class_name, c.qualified_name AS qualified_name, method_count ORDER BY method_count DESC LIMIT 50",
+  "explanation": "This query finds classes in the service package with more than 5 methods, ordered by method count.",
+  "results": [
+    {"class_name": "UserService", "qualified_name": "com.example.service.UserService", "method_count": 12},
+    {"class_name": "OrderService", "qualified_name": "com.example.service.OrderService", "method_count": 8}
+  ],
+  "execution_time_ms": 450
+}
+```
+
+### LLM Prompt
+
+```java
+public class CypherPromptBuilder {
+    
+    private static final String SYSTEM_PROMPT = """
+        You are an expert Neo4j Cypher query generator for a code knowledge graph.
+        
+        ## Graph Schema
+        
+        Nodes:
+        - Repository {name, path}
+        - SourceFile {path, language}
+        - Symbol {symbol, name, kind, documentation, start_line, end_line}
+        
+        Relationships:
+        - (Repository)-[:CONTAINS]->(SourceFile)
+        - (SourceFile)-[:DEFINES]->(Symbol)
+        - (Symbol)-[:REFERENCES {kind}]->(Symbol)
+        
+        Symbol kinds: CLASS, METHOD, FUNCTION, FIELD, INTERFACE, ENUM, CONSTRUCTOR
+        Reference kinds: CALL, IMPORT, INHERITANCE, IMPLEMENTATION, TYPE_REFERENCE
+        
+        ## Rules
+        
+        1. ALWAYS return specific properties with aliases (never `RETURN n`)
+        2. Use `toLower()` for case-insensitive string matching
+        3. Use `CONTAINS` for partial string matching
+        4. Always add `LIMIT 50` for list queries
+        5. For count queries, return ONLY the count
+        6. Use `STARTS WITH` for path matching
+        
+        ## Examples
+        
+        Query: "Find all classes"
+        Cypher:
+        ```cypher
+        MATCH (s:Symbol)
+        WHERE s.kind = 'CLASS'
+        RETURN s.name AS name, s.symbol AS qualified_name
+        LIMIT 50
+        ```
+        
+        Query: "What calls the login method?"
+        Cypher:
+        ```cypher
+        MATCH (caller:Symbol)-[r:REFERENCES]->(target:Symbol)
+        WHERE toLower(target.name) CONTAINS 'login' AND r.kind = 'CALL'
+        RETURN caller.name AS caller_name, caller.symbol AS caller_qualified_name, target.name AS target_name
+        LIMIT 50
+        ```
+        
+        Query: "Count methods in UserService"
+        Cypher:
+        ```cypher
+        MATCH (f:SourceFile)-[:DEFINES]->(s:Symbol)
+        WHERE toLower(f.path) CONTAINS 'userservice' AND s.kind = 'METHOD'
+        RETURN count(s) AS method_count
+        ```
+        
+        ## Your Task
+        
+        Convert the following natural language query to a valid Cypher query.
+        Return ONLY the Cypher query, no explanation.
+        """;
+    
+    public String buildPrompt(String userQuery) {
+        return SYSTEM_PROMPT + "\n\nUser Query: " + userQuery + "\n\nCypher Query:";
+    }
+}
+```
+
+### Implementation
+
+#### LLMClient.java (Interface)
+
+```java
+public interface LLMClient {
+    String complete(String prompt);
+    String complete(String systemPrompt, String userPrompt);
+}
+```
+
+#### OllamaLLMClient.java
+
+```java
+public class OllamaLLMClient implements LLMClient {
+    private final OkHttpClient httpClient;
+    private final String baseUrl;
+    private final String model;
+    
+    public OllamaLLMClient(String baseUrl, String model) {
+        this.httpClient = new OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .build();
+        this.baseUrl = baseUrl;
+        this.model = model;  // e.g., "llama3", "codellama", "mistral"
+    }
+    
+    @Override
+    public String complete(String prompt) {
+        JsonObject request = new JsonObject();
+        request.addProperty("model", model);
+        request.addProperty("prompt", prompt);
+        request.addProperty("stream", false);
+        
+        Request httpRequest = new Request.Builder()
+            .url(baseUrl + "/api/generate")
+            .post(RequestBody.create(request.toString(), MediaType.parse("application/json")))
+            .build();
+        
+        try (Response response = httpClient.newCall(httpRequest).execute()) {
+            JsonObject result = JsonParser.parseString(response.body().string()).getAsJsonObject();
+            return result.get("response").getAsString().trim();
+        }
+    }
+}
+```
+
+#### NLToCypherService.java
+
+```java
+public class NLToCypherService {
+    private final LLMClient llmClient;
+    private final CypherPromptBuilder promptBuilder;
+    private final CypherValidator validator;
+    
+    public CypherResult translate(String naturalLanguageQuery) {
+        // 1. Build prompt
+        String prompt = promptBuilder.buildPrompt(naturalLanguageQuery);
+        
+        // 2. Call LLM
+        String rawResponse = llmClient.complete(prompt);
+        
+        // 3. Extract Cypher (remove markdown if present)
+        String cypher = extractCypher(rawResponse);
+        
+        // 4. Validate
+        if (!validator.isValid(cypher)) {
+            throw new InvalidCypherException("Generated invalid Cypher: " + cypher);
+        }
+        
+        // 5. Sanitize (prevent injection)
+        cypher = validator.sanitize(cypher);
+        
+        return new CypherResult(cypher, "llm");
+    }
+    
+    private String extractCypher(String response) {
+        // Remove ```cypher ... ``` if present
+        if (response.contains("```")) {
+            int start = response.indexOf("```") + 3;
+            if (response.substring(start).startsWith("cypher")) {
+                start += 6;
+            }
+            int end = response.indexOf("```", start);
+            return response.substring(start, end).trim();
+        }
+        return response.trim();
+    }
+}
+```
+
+#### QueryRouter.java
+
+```java
+public class QueryRouter {
+    private final QueryAnalyzer patternAnalyzer;  // MVP1
+    private final NLToCypherService llmService;   // MVP2
+    
+    public QueryResult route(String query, boolean forceLLM) {
+        // 1. Try pattern matching first (fast)
+        if (!forceLLM) {
+            Optional<SearchPlan> plan = patternAnalyzer.tryMatch(query);
+            if (plan.isPresent()) {
+                return new QueryResult(plan.get().toCypher(), "pattern");
+            }
+        }
+        
+        // 2. Fall back to LLM (slow but flexible)
+        CypherResult result = llmService.translate(query);
+        return new QueryResult(result.getCypher(), "llm");
+    }
+}
+```
+
+### Tasks
+
+| Task | Description | Files |
+|------|-------------|-------|
+| 7.1 | LLMClient interface | `llm/LLMClient.java` |
+| 7.2 | OllamaLLMClient implementation | `llm/OllamaLLMClient.java` |
+| 7.3 | CypherPromptBuilder với schema | `llm/CypherPromptBuilder.java` |
+| 7.4 | CypherValidator | `llm/CypherValidator.java` |
+| 7.5 | NLToCypherService | `llm/NLToCypherService.java` |
+| 7.6 | QueryRouter (pattern + LLM) | `search/QueryRouter.java` |
+| 7.7 | POST /query/natural endpoint | `api/handlers/NaturalQueryHandler.java` |
+
+### File Structure (Addition)
+
+```
+src/main/java/org/example/
+├── llm/
+│   ├── LLMClient.java            // NEW
+│   ├── OllamaLLMClient.java      // NEW
+│   ├── CypherPromptBuilder.java  // NEW
+│   ├── CypherValidator.java      // NEW
+│   └── NLToCypherService.java    // NEW
+├── search/
+│   └── QueryRouter.java          // NEW
+└── api/handlers/
+    └── NaturalQueryHandler.java  // NEW
+```
+
+### Configuration
+
+```properties
+# application.properties
+ollama.base-url=http://localhost:11434
+ollama.model=codellama
+ollama.timeout=60
+```
+
+### Success Criteria
+
+- [ ] LLM generates valid Cypher for complex queries
+- [ ] Pattern matching still works (fast path)
+- [ ] QueryRouter correctly routes queries
+- [ ] Cypher validation prevents injection
+- [ ] Response includes method used (pattern/llm)
+
+### Example Queries (MVP2 can handle)
+
+```
+# Complex queries that pattern matching can't handle:
+
+"Find all classes that have more than 5 methods"
+"Show me methods that are called by more than 3 different classes"  
+"What are the most referenced symbols in the codebase?"
+"Find circular dependencies between packages"
+"List all public methods that don't have documentation"
 ```

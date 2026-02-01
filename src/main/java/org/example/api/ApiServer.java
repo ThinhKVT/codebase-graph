@@ -5,16 +5,29 @@ import io.javalin.http.Context;
 import io.javalin.json.JavalinJackson;
 import org.example.api.handlers.DependencyHandler;
 import org.example.api.handlers.ReferenceHandler;
+import org.example.api.handlers.SearchHandler;
 import org.example.api.handlers.SymbolHandler;
+import org.example.embedding.EmbeddingService;
 import org.example.graph.GraphStore;
 import org.example.query.DependencyQuery;
 import org.example.query.ReferenceQuery;
 import org.example.query.SymbolQuery;
+import org.example.vector.VectorStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * HTTP API server exposing graph queries via REST endpoints.
+ * 
+ * <p>Endpoints:</p>
+ * <ul>
+ *   <li>GET /symbols - List symbols</li>
+ *   <li>GET /symbols/{id} - Get symbol details</li>
+ *   <li>GET /symbols/{id}/references - Get references</li>
+ *   <li>GET /symbols/{id}/dependencies - Get dependencies</li>
+ *   <li>GET /search/semantic - Semantic code search</li>
+ *   <li>POST /search/agent - Agent-powered search</li>
+ * </ul>
  */
 public class ApiServer {
 
@@ -23,10 +36,26 @@ public class ApiServer {
     private final GraphStore graphStore;
     private final int port;
     private Javalin app;
+    
+    // Optional services for semantic search
+    private EmbeddingService embeddingService;
+    private VectorStore vectorStore;
+    private String collectionName;
 
     public ApiServer(GraphStore graphStore, int port) {
         this.graphStore = graphStore;
         this.port = port;
+    }
+
+    /**
+     * Enable semantic search capabilities.
+     */
+    public ApiServer withSemanticSearch(EmbeddingService embeddingService, 
+            VectorStore vectorStore, String collectionName) {
+        this.embeddingService = embeddingService;
+        this.vectorStore = vectorStore;
+        this.collectionName = collectionName;
+        return this;
     }
 
     /**
@@ -123,6 +152,22 @@ public class ApiServer {
 
         // Statistics endpoint
         app.get("/stats", this::getStats);
+
+        // Search endpoints (if semantic search is enabled)
+        if (embeddingService != null && vectorStore != null) {
+            SearchHandler searchHandler = new SearchHandler(
+                embeddingService, vectorStore, graphStore, collectionName);
+            
+            // Semantic search
+            app.get("/search/semantic", searchHandler::semanticSearch);
+            app.post("/search/semantic", searchHandler::semanticSearchPost);
+            
+            // Agent search
+            app.get("/search/agent", searchHandler::agentSearchGet);
+            app.post("/search/agent", searchHandler::agentSearch);
+            
+            logger.info("Registered search endpoints (semantic + agent)");
+        }
 
         logger.info("Registered API routes");
     }
