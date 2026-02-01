@@ -11,7 +11,9 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -91,6 +93,16 @@ public abstract class AbstractScipRunner implements ScipRunner {
         // Default: do nothing
     }
 
+    /**
+     * Get additional environment variables to set when running the indexer.
+     * Override to customize environment (e.g., JAVA_HOME for specific Java version).
+     * 
+     * @return Map of environment variable names to values
+     */
+    protected Map<String, String> getEnvironment() {
+        return new HashMap<>();
+    }
+
     // ============= Template Method =============
 
     @Override
@@ -155,6 +167,13 @@ public abstract class AbstractScipRunner implements ScipRunner {
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.directory(workingDirectory.toFile());
             pb.redirectErrorStream(true);
+            
+            // Apply custom environment variables
+            Map<String, String> customEnv = getEnvironment();
+            if (!customEnv.isEmpty()) {
+                pb.environment().putAll(customEnv);
+                logger.info("Custom environment: {}", customEnv);
+            }
 
             Process process = pb.start();
 
