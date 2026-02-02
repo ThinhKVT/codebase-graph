@@ -70,7 +70,7 @@ public class SourceCodeExtractor {
             throw new SourceNotFoundException("File not found: " + path);
         }
         
-        // Check file size to prevent memory exhaustion (10MB limit)
+        // Check file size to prevent memory exhaustion (~10MB limit)
         long fileSize = Files.size(path);
         if (fileSize > 10_000_000) {
             throw new IOException("File too large to extract: " + path + " (" + fileSize + " bytes)");
