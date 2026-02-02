@@ -247,3 +247,169 @@
 2026-02-02 07:19:01.567 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit8268859721112696475
 2026-02-02 07:19:01.589 [main] INFO  org.example.scip.ScipParser - Parsing SCIP index: /tmp/junit12168658697218090100/test.scip
 2026-02-02 07:19:01.593 [main] INFO  org.example.scip.ScipParser - Parsed SCIP index in 4ms: 1 documents, 0 external symbols
+2026-02-02 07:22:58.753 [main] DEBUG org.example.query.ReferenceQuery - Finding references to symbol: target
+2026-02-02 07:22:58.790 [main] DEBUG org.example.query.ReferenceQuery - Finding references for: MyClass
+2026-02-02 07:22:58.805 [main] DEBUG org.example.query.ReferenceQuery - Finding references for: method
+2026-02-02 07:22:58.815 [main] DEBUG org.example.query.ReferenceQuery - Finding references for: Foo
+2026-02-02 07:22:58.825 [main] DEBUG org.example.query.ReferenceQuery - Finding references for: method
+2026-02-02 07:22:58.833 [main] DEBUG org.example.query.ReferenceQuery - Finding references for: com.example.UserService
+2026-02-02 07:22:58.843 [main] DEBUG org.example.query.ReferenceQuery - Finding references from symbol: source
+2026-02-02 07:22:58.873 [main] DEBUG org.example.query.ReferenceQuery - Finding references for: ArrayList
+2026-02-02 07:22:58.890 [main] DEBUG org.example.query.DependencyQuery - Finding dependencies for: MyService with depth: 1
+2026-02-02 07:22:58.896 [main] DEBUG org.example.query.DependencyQuery - Finding dependents for: com.example.BaseClass with depth: 1
+2026-02-02 07:22:58.900 [main] DEBUG org.example.query.DependencyQuery - Finding direct dependents for: sym1
+2026-02-02 07:22:58.903 [main] DEBUG org.example.query.DependencyQuery - Finding dependencies for: Root with depth: 1
+2026-02-02 07:22:58.907 [main] DEBUG org.example.query.DependencyQuery - Finding dependencies for: Root with depth: 2
+2026-02-02 07:22:58.910 [main] DEBUG org.example.query.DependencyQuery - Finding dependencies for: com.example.UserService with depth: 1
+2026-02-02 07:22:58.913 [main] DEBUG org.example.query.DependencyQuery - Finding dependencies for: NonExistent with depth: 1
+2026-02-02 07:22:58.914 [main] WARN  org.example.query.DependencyQuery - Symbol not found: NonExistent
+2026-02-02 07:22:58.918 [main] DEBUG org.example.query.DependencyQuery - Finding dependencies for: A with depth: 3
+2026-02-02 07:22:58.928 [main] DEBUG org.example.query.DependencyQuery - Finding transitive dependents for: sym1 with depth: 2
+2026-02-02 07:22:58.931 [main] DEBUG org.example.query.DependencyQuery - Finding direct dependencies for: sym1
+2026-02-02 07:22:58.933 [main] DEBUG org.example.query.DependencyQuery - Finding transitive dependencies for: sym1 with depth: 0
+2026-02-02 07:22:58.941 [main] DEBUG org.example.query.DependencyQuery - Finding transitive dependencies for: sym1 with depth: 3
+2026-02-02 07:22:58.950 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by pattern: User*
+2026-02-02 07:22:58.952 [main] DEBUG org.example.query.SymbolQuery - Finding symbols with criteria: SymbolSearchCriteria[name=null, fullyQualifiedName=null, kind=null, filePath=null, packageName=null]
+2026-02-02 07:22:58.959 [main] WARN  org.example.query.SymbolQuery - No search criteria specified
+2026-02-02 07:22:58.961 [main] DEBUG org.example.query.SymbolQuery - Finding symbols in file: src/MyClass.java
+2026-02-02 07:22:58.963 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by kind: METHOD
+2026-02-02 07:22:58.965 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by name: MyClass
+2026-02-02 07:22:58.967 [main] DEBUG org.example.query.SymbolQuery - Finding symbols with criteria: SymbolSearchCriteria[name=Foo, fullyQualifiedName=null, kind=null, filePath=null, packageName=null]
+2026-02-02 07:22:58.967 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by name: Foo
+2026-02-02 07:22:58.969 [main] DEBUG org.example.query.SymbolQuery - Finding symbols with criteria: SymbolSearchCriteria[name=Foo*, fullyQualifiedName=null, kind=null, filePath=null, packageName=null]
+2026-02-02 07:22:58.970 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by pattern: Foo*
+2026-02-02 07:22:58.972 [main] DEBUG org.example.query.SymbolQuery - Finding symbols with criteria: SymbolSearchCriteria[name=null, fullyQualifiedName=com.example.Bar, kind=null, filePath=null, packageName=null]
+2026-02-02 07:22:58.972 [main] DEBUG org.example.query.SymbolQuery - Finding symbol by FQN: com.example.Bar
+2026-02-02 07:22:58.974 [main] DEBUG org.example.query.SymbolQuery - Finding symbols with criteria: SymbolSearchCriteria[name=Foo, fullyQualifiedName=null, kind=CLASS, filePath=null, packageName=null]
+2026-02-02 07:22:58.974 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by name: Foo
+2026-02-02 07:22:58.976 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by pattern: *Service
+2026-02-02 07:22:58.976 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by pattern: User?
+2026-02-02 07:22:58.978 [main] DEBUG org.example.query.SymbolQuery - Finding symbol by FQN: nonexistent
+2026-02-02 07:22:58.979 [main] DEBUG org.example.query.SymbolQuery - Finding symbols with criteria: SymbolSearchCriteria[name=Service, fullyQualifiedName=null, kind=null, filePath=null, packageName=com.example]
+2026-02-02 07:22:58.980 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by name: Service
+2026-02-02 07:22:58.982 [main] DEBUG org.example.query.SymbolQuery - Finding symbol by FQN: com.example.MyClass
+2026-02-02 07:22:59.021 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 CONTAINS relationships
+2026-02-02 07:22:59.027 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:22:59.028 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 1 documents, 2 symbols, 1 references
+2026-02-02 07:22:59.033 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 CONTAINS relationships
+2026-02-02 07:22:59.033 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:22:59.034 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 1 documents, 1 symbols, 0 references
+2026-02-02 07:22:59.035 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 CONTAINS relationships
+2026-02-02 07:22:59.038 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:22:59.038 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 2 documents, 2 symbols, 0 references
+2026-02-02 07:22:59.040 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 2 CONTAINS relationships
+2026-02-02 07:22:59.040 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:22:59.040 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 1 documents, 2 symbols, 3 references
+2026-02-02 07:22:59.046 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 1 CONTAINS relationships
+2026-02-02 07:22:59.046 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:22:59.046 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 1 documents, 1 symbols, 1 references
+2026-02-02 07:22:59.047 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 CONTAINS relationships
+2026-02-02 07:22:59.048 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:22:59.048 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 0 documents, 0 symbols, 0 references
+2026-02-02 07:22:59.049 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 CONTAINS relationships
+2026-02-02 07:22:59.050 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:22:59.050 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 1 documents, 2 symbols, 1 references
+2026-02-02 07:22:59.051 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 1 CONTAINS relationships
+2026-02-02 07:22:59.051 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:22:59.052 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 1 documents, 1 symbols, 1 references
+2026-02-02 07:22:59.053 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 CONTAINS relationships
+2026-02-02 07:22:59.053 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:22:59.053 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 1 documents, 4 symbols, 0 references
+2026-02-02 07:22:59.400 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit17061659735951464007
+2026-02-02 07:22:59.448 [main] DEBUG org.example.scip.storage.ScipIndexStorage - Saved metadata: /tmp/junit17061659735951464007/metadata/delete-test-20260202072259.json
+2026-02-02 07:22:59.449 [main] INFO  org.example.scip.storage.ScipIndexStorage - Deleted index: delete-test-20260202072259
+2026-02-02 07:22:59.452 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit4705305863928979683
+2026-02-02 07:22:59.454 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit10239578354662080079
+2026-02-02 07:22:59.457 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit18399290157452265151
+2026-02-02 07:22:59.459 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit9165384020679221769
+2026-02-02 07:22:59.461 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit10474695637802267162
+2026-02-02 07:22:59.463 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit13701671682639932845
+2026-02-02 07:22:59.468 [main] DEBUG org.example.scip.storage.ScipIndexStorage - Saved metadata: /tmp/junit13701671682639932845/metadata/testproject-20260202072259.json
+2026-02-02 07:22:59.471 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit5076446850608016264
+2026-02-02 07:22:59.475 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit4783529448563802390
+2026-02-02 07:22:59.478 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit306674869019991964
+2026-02-02 07:22:59.505 [main] INFO  org.example.scip.ScipParser - Parsing SCIP index: /tmp/junit8413192511322844629/test.scip
+2026-02-02 07:22:59.509 [main] INFO  org.example.scip.ScipParser - Parsed SCIP index in 4ms: 1 documents, 0 external symbols
+2026-02-02 07:23:16.161 [main] DEBUG org.example.query.ReferenceQuery - Finding references to symbol: target
+2026-02-02 07:23:16.196 [main] DEBUG org.example.query.ReferenceQuery - Finding references for: MyClass
+2026-02-02 07:23:16.202 [main] DEBUG org.example.query.ReferenceQuery - Finding references for: method
+2026-02-02 07:23:16.209 [main] DEBUG org.example.query.ReferenceQuery - Finding references for: Foo
+2026-02-02 07:23:16.216 [main] DEBUG org.example.query.ReferenceQuery - Finding references for: method
+2026-02-02 07:23:16.226 [main] DEBUG org.example.query.ReferenceQuery - Finding references for: com.example.UserService
+2026-02-02 07:23:16.237 [main] DEBUG org.example.query.ReferenceQuery - Finding references from symbol: source
+2026-02-02 07:23:16.263 [main] DEBUG org.example.query.ReferenceQuery - Finding references for: ArrayList
+2026-02-02 07:23:16.277 [main] DEBUG org.example.query.DependencyQuery - Finding dependencies for: MyService with depth: 1
+2026-02-02 07:23:16.283 [main] DEBUG org.example.query.DependencyQuery - Finding dependents for: com.example.BaseClass with depth: 1
+2026-02-02 07:23:16.287 [main] DEBUG org.example.query.DependencyQuery - Finding direct dependents for: sym1
+2026-02-02 07:23:16.291 [main] DEBUG org.example.query.DependencyQuery - Finding dependencies for: Root with depth: 1
+2026-02-02 07:23:16.295 [main] DEBUG org.example.query.DependencyQuery - Finding dependencies for: Root with depth: 2
+2026-02-02 07:23:16.298 [main] DEBUG org.example.query.DependencyQuery - Finding dependencies for: com.example.UserService with depth: 1
+2026-02-02 07:23:16.301 [main] DEBUG org.example.query.DependencyQuery - Finding dependencies for: NonExistent with depth: 1
+2026-02-02 07:23:16.302 [main] WARN  org.example.query.DependencyQuery - Symbol not found: NonExistent
+2026-02-02 07:23:16.305 [main] DEBUG org.example.query.DependencyQuery - Finding dependencies for: A with depth: 3
+2026-02-02 07:23:16.317 [main] DEBUG org.example.query.DependencyQuery - Finding transitive dependents for: sym1 with depth: 2
+2026-02-02 07:23:16.322 [main] DEBUG org.example.query.DependencyQuery - Finding direct dependencies for: sym1
+2026-02-02 07:23:16.325 [main] DEBUG org.example.query.DependencyQuery - Finding transitive dependencies for: sym1 with depth: 0
+2026-02-02 07:23:16.329 [main] DEBUG org.example.query.DependencyQuery - Finding transitive dependencies for: sym1 with depth: 3
+2026-02-02 07:23:16.335 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by pattern: User*
+2026-02-02 07:23:16.337 [main] DEBUG org.example.query.SymbolQuery - Finding symbols with criteria: SymbolSearchCriteria[name=null, fullyQualifiedName=null, kind=null, filePath=null, packageName=null]
+2026-02-02 07:23:16.351 [main] WARN  org.example.query.SymbolQuery - No search criteria specified
+2026-02-02 07:23:16.353 [main] DEBUG org.example.query.SymbolQuery - Finding symbols in file: src/MyClass.java
+2026-02-02 07:23:16.355 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by kind: METHOD
+2026-02-02 07:23:16.357 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by name: MyClass
+2026-02-02 07:23:16.361 [main] DEBUG org.example.query.SymbolQuery - Finding symbols with criteria: SymbolSearchCriteria[name=Foo, fullyQualifiedName=null, kind=null, filePath=null, packageName=null]
+2026-02-02 07:23:16.361 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by name: Foo
+2026-02-02 07:23:16.364 [main] DEBUG org.example.query.SymbolQuery - Finding symbols with criteria: SymbolSearchCriteria[name=Foo*, fullyQualifiedName=null, kind=null, filePath=null, packageName=null]
+2026-02-02 07:23:16.364 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by pattern: Foo*
+2026-02-02 07:23:16.366 [main] DEBUG org.example.query.SymbolQuery - Finding symbols with criteria: SymbolSearchCriteria[name=null, fullyQualifiedName=com.example.Bar, kind=null, filePath=null, packageName=null]
+2026-02-02 07:23:16.366 [main] DEBUG org.example.query.SymbolQuery - Finding symbol by FQN: com.example.Bar
+2026-02-02 07:23:16.368 [main] DEBUG org.example.query.SymbolQuery - Finding symbols with criteria: SymbolSearchCriteria[name=Foo, fullyQualifiedName=null, kind=CLASS, filePath=null, packageName=null]
+2026-02-02 07:23:16.368 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by name: Foo
+2026-02-02 07:23:16.370 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by pattern: *Service
+2026-02-02 07:23:16.370 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by pattern: User?
+2026-02-02 07:23:16.372 [main] DEBUG org.example.query.SymbolQuery - Finding symbol by FQN: nonexistent
+2026-02-02 07:23:16.374 [main] DEBUG org.example.query.SymbolQuery - Finding symbols with criteria: SymbolSearchCriteria[name=Service, fullyQualifiedName=null, kind=null, filePath=null, packageName=com.example]
+2026-02-02 07:23:16.374 [main] DEBUG org.example.query.SymbolQuery - Finding symbols by name: Service
+2026-02-02 07:23:16.376 [main] DEBUG org.example.query.SymbolQuery - Finding symbol by FQN: com.example.MyClass
+2026-02-02 07:23:16.415 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 CONTAINS relationships
+2026-02-02 07:23:16.419 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:23:16.419 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 1 documents, 2 symbols, 1 references
+2026-02-02 07:23:16.421 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 CONTAINS relationships
+2026-02-02 07:23:16.422 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:23:16.422 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 1 documents, 1 symbols, 0 references
+2026-02-02 07:23:16.425 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 CONTAINS relationships
+2026-02-02 07:23:16.425 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:23:16.425 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 2 documents, 2 symbols, 0 references
+2026-02-02 07:23:16.427 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 2 CONTAINS relationships
+2026-02-02 07:23:16.427 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:23:16.427 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 1 documents, 2 symbols, 3 references
+2026-02-02 07:23:16.431 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 1 CONTAINS relationships
+2026-02-02 07:23:16.431 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:23:16.431 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 1 documents, 1 symbols, 1 references
+2026-02-02 07:23:16.432 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 CONTAINS relationships
+2026-02-02 07:23:16.433 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:23:16.433 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 0 documents, 0 symbols, 0 references
+2026-02-02 07:23:16.434 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 CONTAINS relationships
+2026-02-02 07:23:16.434 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:23:16.435 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 1 documents, 2 symbols, 1 references
+2026-02-02 07:23:16.436 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 1 CONTAINS relationships
+2026-02-02 07:23:16.436 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:23:16.436 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 1 documents, 1 symbols, 1 references
+2026-02-02 07:23:16.438 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 CONTAINS relationships
+2026-02-02 07:23:16.438 [main] DEBUG org.example.scip.ScipToGraphMapper - Added 0 INJECTS relationships
+2026-02-02 07:23:16.438 [main] INFO  org.example.scip.ScipToGraphMapper - Mapped 1 documents, 4 symbols, 0 references
+2026-02-02 07:23:16.733 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit10053745615866698812
+2026-02-02 07:23:16.772 [main] DEBUG org.example.scip.storage.ScipIndexStorage - Saved metadata: /tmp/junit10053745615866698812/metadata/delete-test-20260202072316.json
+2026-02-02 07:23:16.773 [main] INFO  org.example.scip.storage.ScipIndexStorage - Deleted index: delete-test-20260202072316
+2026-02-02 07:23:16.776 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit8318548514070530927
+2026-02-02 07:23:16.778 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit8865937020812444544
+2026-02-02 07:23:16.781 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit927243656392382328
+2026-02-02 07:23:16.783 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit11240835300767685212
+2026-02-02 07:23:16.785 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit12325064068020693632
+2026-02-02 07:23:16.787 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit4240567310550389912
+2026-02-02 07:23:16.793 [main] DEBUG org.example.scip.storage.ScipIndexStorage - Saved metadata: /tmp/junit4240567310550389912/metadata/testproject-20260202072316.json
+2026-02-02 07:23:16.796 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit17919994122173376728
+2026-02-02 07:23:16.798 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit4917026122452125444
+2026-02-02 07:23:16.801 [main] INFO  org.example.scip.storage.ScipIndexStorage - Initialized SCIP storage at: /tmp/junit2985038977360952142
+2026-02-02 07:23:16.822 [main] INFO  org.example.scip.ScipParser - Parsing SCIP index: /tmp/junit15446480252444198314/test.scip
+2026-02-02 07:23:16.826 [main] INFO  org.example.scip.ScipParser - Parsed SCIP index in 4ms: 1 documents, 0 external symbols

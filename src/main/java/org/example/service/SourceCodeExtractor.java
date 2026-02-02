@@ -35,6 +35,10 @@ public class SourceCodeExtractor {
         String normalized = relativeFilePath.replace('\\', '/').replaceAll("^/", "");
         for (Path base : basePaths) {
             Path resolved = base.resolve(normalized).normalize();
+            // Security: Ensure resolved path is within the base path
+            if (!resolved.startsWith(base)) {
+                continue; // Skip this base path, potential path traversal attempt
+            }
             if (Files.isRegularFile(resolved)) {
                 return resolved;
             }
@@ -65,6 +69,13 @@ public class SourceCodeExtractor {
         if (!Files.isRegularFile(path)) {
             throw new SourceNotFoundException("File not found: " + path);
         }
+        
+        // Check file size to prevent memory exhaustion (10MB limit)
+        long fileSize = Files.size(path);
+        if (fileSize > 10_000_000) {
+            throw new IOException("File too large to extract: " + path + " (" + fileSize + " bytes)");
+        }
+        
         List<String> allLines = Files.readAllLines(path);
 
         // Convert to 0-based indices; clamp to valid range
