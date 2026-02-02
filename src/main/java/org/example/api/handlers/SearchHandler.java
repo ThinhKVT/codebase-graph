@@ -224,10 +224,18 @@ public class SearchHandler {
         if (repository == null && language == null && kind == null) {
             return null;
         }
-        SemanticSearchService.SearchFilters filters = new SemanticSearchService.SearchFilters();
-        if (repository != null) filters = SemanticSearchService.SearchFilters.forRepository(repository);
-        if (language != null) filters = filters != null ? filters.language(language) : new SemanticSearchService.SearchFilters();
-        if (kind != null) filters = filters != null ? filters.kind(kind) : new SemanticSearchService.SearchFilters();
+        SemanticSearchService.SearchFilters filters = null;
+        if (repository != null) {
+            filters = SemanticSearchService.SearchFilters.forRepository(repository);
+        }
+        if (language != null) {
+            filters = filters != null ? filters.language(language) : 
+                new SemanticSearchService.SearchFilters().language(language);
+        }
+        if (kind != null) {
+            filters = filters != null ? filters.kind(kind) : 
+                new SemanticSearchService.SearchFilters().kind(kind);
+        }
         return filters;
     }
 

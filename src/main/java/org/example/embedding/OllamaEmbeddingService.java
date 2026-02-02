@@ -100,9 +100,9 @@ public class OllamaEmbeddingService implements EmbeddingService {
                     logger.debug("Embedded {}/{} texts", i + 1, texts.size());
                 }
             } catch (EmbeddingException e) {
-                logger.warn("Failed to embed text at index {}: {}", i, e.getMessage());
-                // Add zero vector as placeholder for failed embeddings
-                embeddings.add(new float[getDimension()]);
+                logger.error("Failed to embed text at index {}: {}", i, e.getMessage());
+                // Fail fast to prevent corrupting the embedding database with zero vectors
+                throw e;
             }
         }
         

@@ -26,7 +26,7 @@ public class QdrantVectorStore implements VectorStore {
     private final QdrantConfig config;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
-    private boolean connected = false;
+    private volatile boolean connected = false;
 
     public QdrantVectorStore(QdrantConfig config) {
         this.config = config;
@@ -372,8 +372,16 @@ public class QdrantVectorStore implements VectorStore {
         List<SearchResult> results = new ArrayList<>();
         if (resultNode != null && resultNode.isArray()) {
             for (JsonNode item : resultNode) {
-                String id = item.get("id").asText();
-                float score = (float) item.get("score").asDouble();
+                // Null check for required fields
+                JsonNode idNode = item.get("id");
+                JsonNode scoreNode = item.get("score");
+                if (idNode == null || scoreNode == null) {
+                    logger.warn("Skipping malformed search result: missing id or score");
+                    continue;
+                }
+                
+                String id = idNode.asText();
+                float score = (float) scoreNode.asDouble();
                 
                 Map<String, Object> payload = new HashMap<>();
                 JsonNode payloadNode = item.get("payload");

@@ -163,6 +163,7 @@ public abstract class AbstractScipRunner implements ScipRunner {
      * Execute the command and handle output.
      */
     protected void executeCommand(List<String> command, Path expectedOutput) throws ScipException {
+        Process process = null;
         try {
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.directory(workingDirectory.toFile());
@@ -175,7 +176,7 @@ public abstract class AbstractScipRunner implements ScipRunner {
                 logger.info("Custom environment: {}", customEnv);
             }
 
-            Process process = pb.start();
+            process = pb.start();
 
             StringBuilder output = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
@@ -201,6 +202,9 @@ public abstract class AbstractScipRunner implements ScipRunner {
             throw new ScipException("Failed to execute " + getToolCommand() + ": " + e.getMessage(), e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            if (process != null) {
+                process.destroyForcibly();
+            }
             throw new ScipException(getToolCommand() + " execution interrupted", e);
         }
     }
