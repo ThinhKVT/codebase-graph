@@ -127,8 +127,13 @@ class ScipToGraphMapperTest {
 
         var result = mapper.map(index, "/repo");
 
-        assertEquals(1, result.references().size());
-        Reference ref = result.references().get(0);
+        // Filter for CALL references (strategy may add CONTAINS relationships)
+        var callRefs = result.references().stream()
+            .filter(r -> r.kind() == ReferenceKind.CALL)
+            .toList();
+        
+        assertEquals(1, callRefs.size());
+        Reference ref = callRefs.get(0);
         // Method reference should be CALL (not generic REFERENCE)
         assertEquals(ReferenceKind.CALL, ref.kind());
         assertEquals(11, ref.line()); // 1-based

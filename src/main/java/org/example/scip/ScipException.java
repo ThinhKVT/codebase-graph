@@ -19,8 +19,16 @@ public class ScipException extends Exception {
         return new ScipException(
             "scip tool is not installed. Please install the appropriate scip tool for your language.\n" +
             "  Java: scip-java (https://github.com/sourcegraph/scip-java)\n" +
-            "  Python: scip-python (if available)\n" +
-            "  TypeScript: scip-typescript (if available)"
+            "  Go: scip-go (https://github.com/sourcegraph/scip-go)\n" +
+            "  Python: scip-python (https://github.com/sourcegraph/scip-python)\n" +
+            "  TypeScript: scip-typescript (https://github.com/sourcegraph/scip-typescript)"
+        );
+    }
+
+    public static ScipException notInstalled(String toolName) {
+        return new ScipException(
+            toolName + " is not installed. Please install it first.\n" +
+            "  See: https://github.com/sourcegraph/" + toolName
         );
     }
 

@@ -1,11 +1,22 @@
 package org.example.cli;
 
 import org.example.api.ApiServer;
+import org.example.config.OllamaConfig;
+import org.example.config.QdrantConfig;
+import org.example.embedding.EmbeddingService;
+import org.example.embedding.OllamaEmbeddingService;
 import org.example.graph.GraphStore;
 import org.example.graph.Neo4jGraphStore;
+import org.example.llm.LLMClient;
+import org.example.llm.OllamaLLMClient;
+import org.example.vector.QdrantVectorStore;
+import org.example.vector.VectorStore;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
@@ -26,19 +37,113 @@ public class ServeCommand implements Callable<Integer> {
     @Option(names = {"--neo4j-password"}, description = "Neo4j password", defaultValue = "password")
     private String neo4jPassword;
 
+    @Option(names = {"--enable-semantic"}, description = "Enable semantic search endpoints (requires Qdrant and Ollama)")
+    private boolean enableSemantic;
+
+    @Option(names = {"--qdrant-host"}, description = "Qdrant host", defaultValue = "localhost")
+    private String qdrantHost;
+
+    @Option(names = {"--qdrant-port"}, description = "Qdrant HTTP port", defaultValue = "6333")
+    private int qdrantPort;
+
+    @Option(names = {"--ollama-host"}, description = "Ollama host", defaultValue = "localhost")
+    private String ollamaHost;
+
+    @Option(names = {"--ollama-port"}, description = "Ollama port", defaultValue = "11434")
+    private int ollamaPort;
+
+    @Option(names = {"--collection"}, description = "Qdrant collection name", defaultValue = "code_symbols")
+    private String collectionName;
+
+    @Option(names = {"--source-root"}, description = "Base path(s) to resolve source files (default: repository paths from graph)")
+    private String[] sourceRootsOption;
+
+    @Option(names = {"--enable-natural-query"}, description = "Enable natural language to Cypher (POST /query/natural, requires Ollama)")
+    private boolean enableNaturalQuery;
+
+    @Option(names = {"--llm-model"}, description = "Ollama model for Cypher generation", defaultValue = "llama3")
+    private String llmModel;
+
     @Override
     public Integer call() {
         System.out.println("Starting Codebase Knowledge Graph API server...");
 
         // Initialize graph store
         GraphStore graphStore = new Neo4jGraphStore(neo4jUri, neo4jUser, neo4jPassword);
+        EmbeddingService embeddingService = null;
+        VectorStore vectorStore = null;
 
         try {
             graphStore.connect();
             System.out.println("Connected to Neo4j at " + neo4jUri);
 
-            // Create and start API server
+            // Create API server
             ApiServer server = new ApiServer(graphStore, port);
+
+            // Enable semantic search if requested
+            if (enableSemantic) {
+                System.out.println("Enabling semantic search endpoints...");
+                
+                // Initialize Ollama
+                OllamaConfig ollamaConfig = OllamaConfig.builder()
+                    .host(ollamaHost)
+                    .port(ollamaPort)
+                    .build();
+                embeddingService = new OllamaEmbeddingService(ollamaConfig);
+                
+                if (!embeddingService.isAvailable()) {
+                    System.err.println("Warning: Ollama is not available at " + ollamaHost + ":" + ollamaPort);
+                    System.err.println("Semantic search will be disabled.");
+                } else {
+                    System.out.println("Connected to Ollama at " + ollamaHost + ":" + ollamaPort);
+                    
+                    // Initialize Qdrant
+                    QdrantConfig qdrantConfig = QdrantConfig.builder()
+                        .host(qdrantHost)
+                        .httpPort(qdrantPort)
+                        .collectionName(collectionName)
+                        .build();
+                    vectorStore = new QdrantVectorStore(qdrantConfig);
+                    vectorStore.connect();
+                    System.out.println("Connected to Qdrant at " + qdrantHost + ":" + qdrantPort);
+                    
+                    // Enable semantic search on API server
+                    server.withSemanticSearch(embeddingService, vectorStore, collectionName);
+                    System.out.println("Semantic search enabled on collection: " + collectionName);
+                }
+            }
+
+            // Code retrieval: use repository paths from graph + any --source-root
+            List<Path> sourceRoots = new ArrayList<>();
+            graphStore.findAllRepositories().stream()
+                .map(r -> Path.of(r.path()))
+                .forEach(sourceRoots::add);
+            if (sourceRootsOption != null) {
+                for (String root : sourceRootsOption) {
+                    if (root != null && !root.isBlank()) {
+                        sourceRoots.add(Path.of(root).toAbsolutePath().normalize());
+                    }
+                }
+            }
+            if (!sourceRoots.isEmpty()) {
+                server.withCodeRetrieval(sourceRoots);
+                System.out.println("Code retrieval enabled with " + sourceRoots.size() + " source root(s)");
+            }
+
+            // Natural language to Cypher (MVP2)
+            boolean naturalQueryEnabled = false;
+            if (enableNaturalQuery) {
+                String ollamaBaseUrl = "http://" + ollamaHost + ":" + ollamaPort;
+                LLMClient llmClient = new OllamaLLMClient(ollamaBaseUrl, llmModel, 60);
+                if (llmClient.isAvailable()) {
+                    server.withNaturalQuery(llmClient);
+                    naturalQueryEnabled = true;
+                    System.out.println("Natural query enabled (POST /query/natural, model: " + llmModel + ")");
+                } else {
+                    System.err.println("Warning: Ollama not available at " + ollamaBaseUrl + ", natural query disabled.");
+                }
+            }
+
             server.start();
 
             System.out.println();
@@ -56,11 +161,38 @@ public class ServeCommand implements Callable<Integer> {
             System.out.println("  GET /symbols/{id}/references     - Get references to symbol");
             System.out.println("  GET /symbols/{id}/dependencies   - Get symbol dependencies");
             System.out.println("  GET /symbols/{id}/dependents     - Get symbols depending on this");
+            if (!sourceRoots.isEmpty()) {
+                System.out.println();
+                System.out.println("Code Retrieval endpoints:");
+                System.out.println("  GET  /symbols/{id}/source       - Get source code by symbol ID");
+                System.out.println("  GET  /code?qualified_name=...   - Get source by FQN");
+                System.out.println("  POST /code/batch               - Batch source retrieval");
+            }
+            if (naturalQueryEnabled) {
+                System.out.println();
+                System.out.println("Natural Query endpoint:");
+                System.out.println("  POST /query/natural   - Natural language to Cypher");
+            }
+            if (enableSemantic && vectorStore != null) {
+                System.out.println();
+                System.out.println("Semantic Search endpoints:");
+                System.out.println("  GET  /search/semantic?q=<query>  - Semantic code search");
+                System.out.println("  POST /search/semantic            - Semantic search with body");
+                System.out.println("  GET  /search/agent?q=<query>     - Agent-powered search");
+                System.out.println("  POST /search/agent               - Agent search with body");
+            }
+
+            // Capture resources for shutdown hook
+            final EmbeddingService finalEmbeddingService = embeddingService;
+            final VectorStore finalVectorStore = vectorStore;
 
             // Add shutdown hook
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 System.out.println("\nShutting down...");
                 server.stop();
+                if (finalVectorStore != null) {
+                    finalVectorStore.close();
+                }
                 graphStore.close();
                 System.out.println("Server stopped.");
             }));
@@ -72,6 +204,9 @@ public class ServeCommand implements Callable<Integer> {
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
             e.printStackTrace();
+            if (vectorStore != null) {
+                vectorStore.close();
+            }
             graphStore.close();
             return 1;
         }

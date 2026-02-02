@@ -58,5 +58,11 @@ public interface GraphStore extends AutoCloseable {
     // Maintenance
     void createIndexes();
     void clearAll();
+
+    /**
+     * Run a read-only Cypher query and return results as list of maps (key = column name, value = scalar or list).
+     * For natural-language-to-Cypher (MVP2). Caller must validate query is read-only.
+     */
+    java.util.List<java.util.Map<String, Object>> runQuery(String cypher, java.util.Map<String, Object> params);
 }
 

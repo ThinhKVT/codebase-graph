@@ -1,0 +1,53 @@
+# Multi-stage build with multiple Java versions support
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn package -DskipTests
+
+# Runtime stage with scip-java and multiple Java versions
+FROM sourcegraph/scip-java:latest
+
+# Install additional Java versions (8, 11, 21)
+USER root
+
+# Install Java 8
+RUN apt-get update && \
+    apt-get install -y wget && \
+    wget -O /tmp/openjdk8.tar.gz https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u432-b06/OpenJDK8U-jdk_x64_linux_hotspot_8u432b06.tar.gz && \
+    mkdir -p /opt/java/jdk8 && \
+    tar -xzf /tmp/openjdk8.tar.gz -C /opt/java/jdk8 --strip-components=1 && \
+    rm /tmp/openjdk8.tar.gz
+
+# Install Java 11
+RUN wget -O /tmp/openjdk11.tar.gz https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.25%2B9/OpenJDK11U-jdk_x64_linux_hotspot_11.0.25_9.tar.gz && \
+    mkdir -p /opt/java/jdk11 && \
+    tar -xzf /tmp/openjdk11.tar.gz -C /opt/java/jdk11 --strip-components=1 && \
+    rm /tmp/openjdk11.tar.gz
+
+# Install Java 21
+RUN wget -O /tmp/openjdk21.tar.gz https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.6%2B7/OpenJDK21U-jdk_x64_linux_hotspot_21.0.6_7.tar.gz && \
+    mkdir -p /opt/java/jdk21 && \
+    tar -xzf /tmp/openjdk21.tar.gz -C /opt/java/jdk21 --strip-components=1 && \
+    rm /tmp/openjdk21.tar.gz
+
+# Install Maven system-wide
+RUN apt-get install -y maven
+
+# Create wrapper script to handle mvnw permission
+RUN echo '#!/bin/bash\n\
+    if [ -f "$1/mvnw" ]; then\n\
+    chmod +x "$1/mvnw"\n\
+    fi\n\
+    exec "$@"' > /usr/local/bin/fix-mvnw.sh && \
+    chmod +x /usr/local/bin/fix-mvnw.sh
+
+WORKDIR /app
+COPY --from=build /app/target/codebase-graph-1.0-SNAPSHOT.jar /app/codebase-graph.jar
+
+ENV JAVA_OPTS="-Xms128m -Xmx512m"
+ENV JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64
+
+# Wrapper script to fix mvnw before running
+ENTRYPOINT ["sh", "-c", "if [ -n \"$REPO_PATH\" ] && [ -f \"$REPO_PATH/mvnw\" ]; then chmod +x \"$REPO_PATH/mvnw\"; fi; java $JAVA_OPTS -jar /app/codebase-graph.jar \"$@\"", "--"]
+CMD ["serve", "--port", "8080"]

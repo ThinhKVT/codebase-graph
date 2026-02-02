@@ -1,0 +1,62 @@
+---
+description: Convention for organizing documentation, plans, and tasks in doc folder
+alwaysApply: true
+---
+
+# Documentation Organization Convention
+
+All project documentation, plans, and tasks should be organized in the `doc/` folder with the following structure:
+
+## Folder Structure
+
+```
+doc/
+├── {feature-name}/
+│   ├── PLAN.md           # Main plan file for the feature
+│   ├── README.md         # Overview and quick reference (optional)
+│   └── tasks/
+│       ├── task-001.md   # Individual task details
+│       ├── task-002.md
+│       └── ...
+├── {another-feature}/
+│   ├── PLAN.md
+│   └── tasks/
+└── ARCHITECTURE_AND_WORKFLOW.md  # Global architecture docs
+```
+
+## Naming Conventions
+
+- **Feature folders**: Use kebab-case (e.g., `multi-language-graph-mapper`, `api-authentication`)
+- **Plan files**: Always name the main plan `PLAN.md`
+- **Task files**: Use `task-{number}.md` or `{task-id}.md` format
+
+## Plan File Format
+
+Plans should include:
+1. **Overview** - Brief description of what the feature does
+2. **Goals** - What we want to achieve
+3. **Implementation Details** - Technical approach
+4. **Tasks** - List of todos with status
+
+## Task File Format
+
+Each task file should contain:
+- Task ID and title
+- Description
+- Acceptance criteria
+- Status (pending/in_progress/completed/cancelled)
+- Related files/code references
+
+## Example
+
+```
+doc/
+├── multi-language-graph-mapper/
+│   ├── PLAN.md
+│   └── tasks/
+│       ├── create-abstract-runner.md
+│       ├── create-go-strategy.md
+│       └── update-tests.md
+```
+
+When creating new plans or working on features, always use this structure to keep documentation organized and easy to navigate.
